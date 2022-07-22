@@ -584,6 +584,7 @@ async function _fetchUnknownTransactions(addrObjs, knownTxIds, targetWindow) {
           let noPages = Math.ceil(info.txAppearances / 1000)
           for (let i = 0; i < Math.ceil(info.txAppearances); i+=1000) {
             let infoPg = await apiGet(`/addr/${obj.address}?from=${i}&to=${i+1000}`)
+            targetWindow.webContents.send('task-running', `Fetching transaction information for ${obj.address} \n(${i}/${Math.ceil(info.txAppearances)})`);
             infoPg.transactions.forEach(txid => txIdSet.add({address,txid}));
           }
         }
