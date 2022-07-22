@@ -548,60 +548,62 @@ const fetchAllTransactions = exports.fetchAllTransactions = async (targetWindow)
 		targetWindow.webContents.send('task-running', `Update from API failed: ${err}`);
 		return;
 	};
-
-  try {
-    newTransactions = await _fetchTransactionDetails(transactions, addrObjs, targetWindow);
-  } catch (err) {
-    targetWindow.webContents.send('task-running', `Error getting transaction details from API:  ${err}`);
-    return;
-  }
-
-	let count = 0;
-	async.eachOf(newTransactions, function(tx) {
-		targetWindow.webContents.send('task-running', `Saving fetched transactions...`);
-		db.run(`INSERT INTO transactions (txid, time, address, vins, vouts, amount, fees, block, currency) VALUES (?,?,?,?,?,?,?,?,?)`, [tx.txid, tx.time, tx.address, tx.vins, tx.vouts, tx.amount, tx.fees, tx.block, 'ZEN'], function(err) {
-			if (err) {
-				dbErrorBox(err, 'writing');
-			}
-		})
-		count++;
-	});
-	databaseClose(db);
 	targetWindow.webContents.send('task-running', `All transactions saved`);
 }
 
 async function _fetchUnknownTransactions(addrObjs, knownTxIds, targetWindow) {
-    const result = {
-        changedAddrs: [],
-        newTxs: []
-    };
-    const txIdSet = new Set();
-    for (const obj of addrObjs) {
-			targetWindow.webContents.send('task-running', `Fetching transaction information for ${obj.address}`);
-        const info = await apiGet("/addr/" + obj.address);
-				let address = info.addrStr;
-        if (info.txAppearances > 1000) {
-          let noPages = Math.ceil(info.txAppearances / 1000)
-          for (let i = 0; i < Math.ceil(info.txAppearances); i+=1000) {
-            let infoPg = await apiGet(`/addr/${obj.address}?from=${i}&to=${i+1000}`)
-            targetWindow.webContents.send('task-running', `Fetching transaction information for ${obj.address} \n(${i}/${Math.ceil(info.txAppearances)})`);
-            infoPg.transactions.forEach(txid => txIdSet.add({address,txid}));
-          }
-        }
-    }
-		var resultArray = Object.values(JSON.parse(JSON.stringify(knownTxIds)));
-		resultArray.forEach(element => {
-			txIdSet.forEach(obj => {
-				if (obj.address === element.address && obj.txid === element.txid) {
-					txIdSet.delete(obj);
-				}
-			})
-		});
+  const result = {
+    changedAddrs: [],
+    newTxs: []
+  };
 
-    return txIdSet;
+  for (const obj of addrObjs) {
+		targetWindow.webContents.send('task-running', `Fetching transaction information for ${obj.address}`);
+    const info = await apiGet("/addr/" + obj.address);
+		let address = info.addrStr;
+    if (info.txAppearances > 1000) {
+      let noPages = Math.ceil(info.txAppearances / 10)
+      for (let i = 0; i < Math.ceil(info.txAppearances); i+=10) {
+        const txIdSet = new Set();
+        let db = new sqlite3.Database(dbPath, (err) => {
+          if (err) {
+            dbErrorBox(err, 'connecting');
+          }
+        });
+        let infoPg = await apiGet(`/addr/${obj.address}?from=${i}&to=${i+10}`)
+        targetWindow.webContents.send('task-running', `Scanning existing transaction information for ${obj.address} \n(${i}/${Math.ceil(info.txAppearances)})`);
+        infoPg.transactions.forEach(txid => txIdSet.add({address,txid}));
+
+        var resultArray = Object.values(JSON.parse(JSON.stringify(knownTxIds)));
+        resultArray.forEach(element => {
+          txIdSet.forEach(obj => {
+            if (obj.address === element.address && obj.txid === element.txid) {
+              txIdSet.delete(obj);
+            }
+          })
+        });
+        try {
+          newTransactions = await _fetchTransactionDetails(txIdSet, addrObjs, info.txAppearances, i, targetWindow);
+        } catch (err) {
+          targetWindow.webContents.send('task-running', `Error getting transaction details from API:  ${err}`);
+          return;
+        }
+        let count = 0;
+        async.eachOf(newTransactions, function(tx) {
+          db.run(`INSERT INTO transactions (txid, time, address, vins, vouts, amount, fees, block, currency) VALUES (?,?,?,?,?,?,?,?,?)`, [tx.txid, tx.time, tx.address, tx.vins, tx.vouts, tx.amount, tx.fees, tx.block, 'ZEN'], function(err) {
+            if (err) {
+              dbErrorBox(err, 'writing');
+            }
+          })
+          count++;
+        });
+        databaseClose(db);
+      }
+    }
+  }
 }
 
-async function _fetchTransactionDetails(txIds, myAddrs, targetWindow) {
+async function _fetchTransactionDetails(txIds, myAddrs, appearances, page, targetWindow) {
     const txs = [];
 		const myAddrSetOrig = new Set(!Array.isArray(myAddrs) ? [myAddrs] : myAddrs);
     let totalTx = 0;
@@ -611,7 +613,7 @@ async function _fetchTransactionDetails(txIds, myAddrs, targetWindow) {
 		let txNumber = 1;
     for (const txId of txIds) {
 			  const myAddrSet = new Set([txId.address]);
-				targetWindow.webContents.send('task-running', `Fetching transaction ${txId.txid} for  ${txId.address} \n(${txNumber}/${totalTx})`);
+				targetWindow.webContents.send('task-running', `Fetching transaction ${txId.txid} for  ${txId.address} \n(${txNumber + page}/${appearances})`);
         const info = await apiGet("tx/" + txId.txid);
         let txBalance = 0;
         const vins = [];
