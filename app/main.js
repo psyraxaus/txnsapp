@@ -186,7 +186,7 @@ const setSettings = exports.setSettings = (targetWindow, updatedSettings) => {
   settings = updatedSettings;
   axiosApi = axios.create({
     baseURL: settings.apiUrl,
-    timeout: 5000,
+    timeout: 50000,
   });
   mainWindow.webContents.send('settings', updatedSettings);
 };
@@ -558,7 +558,7 @@ const fetchAllTransactions = exports.fetchAllTransactions = async (targetWindow)
 
 	let count = 0;
 	async.eachOf(newTransactions, function(tx) {
-		targetWindow.webContents.send('task-running', `Saving transactions...`);
+		targetWindow.webContents.send('task-running', `Saving fetched transactions...`);
 		db.run(`INSERT INTO transactions (txid, time, address, vins, vouts, amount, fees, block, currency) VALUES (?,?,?,?,?,?,?,?,?)`, [tx.txid, tx.time, tx.address, tx.vins, tx.vouts, tx.amount, tx.fees, tx.block, 'ZEN'], function(err) {
 			if (err) {
 				dbErrorBox(err, 'writing');
