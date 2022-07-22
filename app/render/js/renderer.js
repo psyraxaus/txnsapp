@@ -122,6 +122,10 @@ ipcRenderer.on('new-addresses', (event, newAddressItems) => {
 });
 
 ipcRenderer.on('task-running', (event, message) => {
+  if (message.includes("Error")) {
+    document.getElementById('currenttaskwindowtext').style.color = '#DC143C';
+    currentTaskwindowText.innerHTML = message;
+  }
   currentTaskwindowText.innerHTML = message;
 });
 

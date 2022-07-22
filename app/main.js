@@ -227,17 +227,19 @@ const addSingleAddress = exports.addSingleAddress = async(targetWindow, addressT
 		}
 	});
 	let error = bitcore.Address.getValidationError(addressText, 'livenet');
+
 	if (!error) {
 		let validateAddress = bitcore.Address(addressText, 'livenet');
 		let isExisting = await _checkExisting(db, addressText);
+    let info;
 		if (!isExisting) {
 			try {
-				var info = await apiGet(`addr/${addressText}`);
+				info = await apiGet(`addr/${addressText}`);
 			} catch (err){
 				const result = dialog.showMessageBox(mainWindow, {
 					type: 'warning',
 					title: 'Error connecting to API',
-					message: `An error occurred when connecting the API endpoint. \n ${err.message})`,
+					message: `An error occurred when connecting the API endpoint. \n ${err.message}`,
 					buttons: [
 						'OK',
 					],
@@ -280,7 +282,6 @@ const deriveAddressesFromXpub = exports.deriveAddressesFromXpub = async (targetW
 	try {
 		var hdPublickey = new bitcore.HDPublicKey(xpub);
 	} catch (err) {
-		console.log(err)
 		let truncError = err.toString().split(" ").splice(1,3).join(" ");
 		const result = dialog.showMessageBox(targetWindow, {
 			type: 'warning',
@@ -306,21 +307,24 @@ const deriveAddressesFromXpub = exports.deriveAddressesFromXpub = async (targetW
 			let address = Address.fromPublicKey(pubkey, Networks.mainnet);
 			targetWindow.webContents.send('searchDerivationPath', `Searching transactions for ${address.toString()} with derivation ${derivation}`);
 			let isExisting = await _checkExisting(db, address);
+      let info;
 
 			if (isExisting === false) {
 				try {
-					var info = await apiGet(`addr/${address.toString()}`);
+					info = await apiGet(`addr/${address.toString()}`);
 				} catch (err){
 					const result = dialog.showMessageBox(mainWindow, {
 						type: 'warning',
 						title: 'Error connecting to API',
-						message: `An error occurred when connecting the API endpoint. \n ${err.message})`,
+						message: `An error occurred when connecting the API endpoint. \n ${err.message}`,
 						buttons: [
 							'OK',
 						],
 						defaultId: 0
 					});
+          targetWindow.webContents.send('searchDerivationPath', `Update from API failed, ${err}`)
 					targetWindow.webContents.send('task-running', `Update from API failed, ${err}`);
+          targetWindow.webContents.send('completed-import');
 					return;
 				}
 
@@ -380,12 +384,21 @@ const loadAddressesFromFile = exports.loadAddressesFromFile = async (targetWindo
 
 	for (let i = 0; i < newAddressesArray.length; i++) {
 		let isExisting = await _checkExisting(db, newAddressesArray[i].address);
-
+    let info;
 		if (isExisting === false) {
 			try {
 				targetWindow.webContents.send('searchDerivationPath', `Confirming transaction history for ${newAddressesArray[i].address} (${i + 1}/${newAddressesArray.length})`);
-				var info = await apiGet(`addr/${newAddressesArray[i].address}`);
+				info = await apiGet(`addr/${newAddressesArray[i].address}`);
 			} catch (err){
+        const result = dialog.showMessageBox(mainWindow, {
+          type: 'warning',
+          title: 'Error connecting to API',
+          message: `An error occurred when connecting the API endpoint. \n ${err.message}`,
+          buttons: [
+            'OK',
+          ],
+          defaultId: 0
+        });
 				targetWindow.webContents.send('searchDerivationPath', `Unable to return API : ${err} \nAPI call : /addr/${newAddressesArray[i].address}`);
 				return;
 			}
@@ -545,13 +558,25 @@ const fetchAllTransactions = exports.fetchAllTransactions = async (targetWindow)
 	try {
 		transactions = await _fetchUnknownTransactions(addrObjs, knownTxIds, targetWindow);
 	} catch (err) {
-    if (err.includes("429")) {
-      let errType = "Rate Limited";
+    const result = dialog.showMessageBox(mainWindow, {
+      type: 'warning',
+      title: 'Error connecting to API',
+      message: `An error occurred when connecting the API endpoint. \n ${err.message}`,
+      buttons: [
+        'OK',
+      ],
+      defaultId: 0
+    });
+    let errType;
+    if (err.message.toString().includes("429")) {
+      errType = "Rate Limited"
+
     }
 		targetWindow.webContents.send('task-running', `Update from API failed: ${err} \n - ${errType}`);
 		return;
 	};
 	targetWindow.webContents.send('task-running', `All transactions saved`);
+  return;
 }
 
 async function _fetchUnknownTransactions(addrObjs, knownTxIds, targetWindow) {
@@ -562,7 +587,9 @@ async function _fetchUnknownTransactions(addrObjs, knownTxIds, targetWindow) {
 
   for (const obj of addrObjs) {
 		targetWindow.webContents.send('task-running', `Fetching transaction information for ${obj.address}`);
-    const info = await apiGet("/addr/" + obj.address);
+
+    let info = await apiGet("/addr/" + obj.address);
+
 		let address = info.addrStr;
     if (info.txAppearances > 1000) {
       let noPages = Math.ceil(info.txAppearances / 10)
@@ -574,6 +601,7 @@ async function _fetchUnknownTransactions(addrObjs, knownTxIds, targetWindow) {
           }
         });
         let infoPg = await apiGet(`/addr/${obj.address}?from=${i}&to=${i+10}`)
+
         targetWindow.webContents.send('task-running', `Scanning existing transaction information for ${obj.address} \n(${i}/${Math.ceil(info.txAppearances)})`);
         infoPg.transactions.forEach(txid => txIdSet.add({address,txid}));
 
@@ -614,10 +642,27 @@ async function _fetchTransactionDetails(txIds, myAddrs, appearances, page, targe
       totalTx = totalTx + 1;
     };
 		let txNumber = 1;
+
     for (const txId of txIds) {
 			  const myAddrSet = new Set([txId.address]);
+        let info;
 				targetWindow.webContents.send('task-running', `Fetching transaction ${txId.txid} for  ${txId.address} \n(${txNumber + page}/${appearances})`);
-        const info = await apiGet("tx/" + txId.txid);
+        try {
+          info = await apiGet("tx/" + txId.txid);
+        } catch (err) {
+          const result = dialog.showMessageBox(mainWindow, {
+            type: 'warning',
+            title: 'Error connecting to API',
+            message: `An error occurred when connecting the API endpoint. \n ${err.message}`,
+            buttons: [
+              'OK',
+            ],
+            defaultId: 0
+          });
+          targetWindow.webContents.send('task-running', `Update from API failed, ${err}`);
+          return;
+        }
+
         let txBalance = 0;
         const vins = [];
         const vouts = [];

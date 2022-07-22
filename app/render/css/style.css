@@ -130,6 +130,10 @@ footer {
   word-wrap:break-word;
 }
 
+.addressStatusText {
+  padding-top: 10px;
+}
+
 .submitNewAddress {
   padding-top: 25px;
   width: 200px;

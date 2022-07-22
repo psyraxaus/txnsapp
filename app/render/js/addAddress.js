@@ -103,7 +103,6 @@ ipc.on('file-opened', (event, file) => {
 
 ipc.on('searchDerivationPath', (event, message) => {
   if (message.includes("Error")) {
-    console.log('error found')
     document.getElementById('derivationPathText').style.color = '#DC143C';
     derivationText.innerHTML = message;
   }
