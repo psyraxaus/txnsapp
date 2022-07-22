@@ -580,7 +580,13 @@ async function _fetchUnknownTransactions(addrObjs, knownTxIds, targetWindow) {
 			targetWindow.webContents.send('task-running', `Fetching transaction information for ${obj.address}`);
         const info = await apiGet("/addr/" + obj.address);
 				let address = info.addrStr;
-				info.transactions.forEach(txid => txIdSet.add({address,txid}));
+        if (info.txAppearances > 1000) {
+          let noPages = Math.ceil(info.txAppearances / 1000)
+          for (let i = 0; i < Math.ceil(info.txAppearances); i+=1000) {
+            let infoPg = await apiGet(`/addr/${obj.address}?from=${i}&to=${i+1000}`)
+            infoPg.transactions.forEach(txid => txIdSet.add({address,txid}));
+          }
+        }
     }
 		var resultArray = Object.values(JSON.parse(JSON.stringify(knownTxIds)));
 		resultArray.forEach(element => {
