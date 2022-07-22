@@ -545,7 +545,10 @@ const fetchAllTransactions = exports.fetchAllTransactions = async (targetWindow)
 	try {
 		transactions = await _fetchUnknownTransactions(addrObjs, knownTxIds, targetWindow);
 	} catch (err) {
-		targetWindow.webContents.send('task-running', `Update from API failed: ${err}`);
+    if (err.includes("429")) {
+      let errType = "Rate Limited";
+    }
+		targetWindow.webContents.send('task-running', `Update from API failed: ${err} \n - ${errType}`);
 		return;
 	};
 	targetWindow.webContents.send('task-running', `All transactions saved`);
