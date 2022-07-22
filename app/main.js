@@ -376,7 +376,6 @@ const loadAddressesFromFile = exports.loadAddressesFromFile = async (targetWindo
 			}
 		})
 	});
-  console.log(addrSet)
 	let newAddressesArray = Array.from(addrSet);
 
 	for (let i = 0; i < newAddressesArray.length; i++) {

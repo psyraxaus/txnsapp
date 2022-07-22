@@ -72,7 +72,7 @@ addAddressesButton.addEventListener('click', () => {
     win = null;
   });
 
-  win.loadURL(`file://${__dirname}/render/html/addAddress.html`);
+  win.loadURL(`file://${__dirname}/../html/addAddress.html`);
   win.show();
 });
 
@@ -104,7 +104,7 @@ settingsButton.addEventListener('click', () => {
     win = null;
   });
 
-  win.loadURL(`file://${__dirname}/render/html/settings.html`);
+  win.loadURL(`file://${__dirname}/../html/settings.html`);
   win.show();
 });
 
