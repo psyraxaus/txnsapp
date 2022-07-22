@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Settings Dialog</title>
+    <link rel="stylesheet" href="../css/style.css" type="text/css">
+  </head>
+  <body>
+    <form class="csvTypeForm">
+      <div>
+        Please select the CSV output type for your crypto tax:
+        <div class="taxRadios">
+          <input type="radio" name="csvType" id="Cointracking" value="Cointracking"> Cointracking
+          <input type="radio" name="csvType" id="CrytotaxCalc" value="CrytotaxCalc"> CryptotaxCalculator
+          <input type="radio" name="csvType" id="Accointing" value="Accointing"> Accointing
+          <input type="radio" name="csvType" id="Koinly" value="Koinly"> Koinly
+          <input type="radio" name="csvType" id="Unformatted" value="Unformatted"> Unformatted
+        </div>
+        <div class="urlBoxes">
+          <div class="explorerBox">
+            <div class="urlLabel">Explorer URL </div><div class="urlText"><input id="explorerUrlTextBox" type="text" name="explorerUrl" value="" maxlength="200" style="width:425px"></div>
+          </div>
+          <div class="apiBox">
+            <div class="urlLabel">API URL</div><div class="urlText"><input id="apiUrlTextBox" type="text" name="apiUrl" value="" maxlength="200" style="width:425px"></div>
+          </div>
+          <div class="refreshIntervalBox">
+            <div class="urlLabel">API Refresh Interval</div>
+            <div class="urlText"><input id="refreshTextBox" type="text" name="refreshInterval" value="" maxlength="4" style="width:45px"><span class="apiRefreshWarn"> Altering this may result in your API connection being rate limited</span></div>
+
+          </div>
+        </div>
+        <div class="bottomSection">
+          <div class="settingsStatus" id="settingsStatus"></div>
+          <div class="submitSettings" id="submitSettings">
+            <span><button id="savesettingsbutton">Save</button></span>
+            <span><button class="closeButton" id="closebutton">Close</button></span>
+          </div>
+        </div>
+      </div>
+    </form>
+  </body>
+  <script>
+    require('../js/settings')
+  </script>
+</html>

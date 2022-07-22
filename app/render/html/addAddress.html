@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Add Address Dialog</title>
+    <link rel="stylesheet" href="../css/style.css" type="text/css">
+  </head>
+  <body>
+    <form class="addAddressForm">
+      <div>
+        How would you like to add addresses?
+        <br><br>
+        <input type="radio" name="addressType" id="single" checked="TRUE"> Single address
+        <input type="radio" name="addressType" id="xpub"> xpub address
+        <input type="radio" name="addressType" id="file"> file
+        <br>
+        Enter new address or xpub, or select file and press the open file button (required).
+        <br>
+        <input id="addresstextbox" type="text" name="address" value="" maxlength="200" style="width:1100px">
+        <button id="add-file" disabled>Open File</button>
+        <br><br>
+        Enter a wallet source (optional) &nbsp <input id="walletsourcetextbox" type="text" name="comment" value="" maxlength="200" style="width:400px">
+        <br>
+        Enter comments (optional) &nbsp <input id="descriptiontextbox" type="text" name="comment" value="" maxlength="200" style="width:400px">
+
+      </div>
+      <div class="">
+        <span class="derivationPathText" id="derivationPathText"></span>
+        <span class="submitNewAddress" id="submitNewAddress">
+          <span><button id="add-address-button" disabled>Add Address/s</button></span>
+          <span><button class="closeButton" id="closebutton">Close</button></span>
+        </span>
+      </div>
+    </form>
+  </body>
+  <script>
+    require('../js/addAddress')
+  </script>
+</html>

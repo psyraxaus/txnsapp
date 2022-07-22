@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Transaction History App</title>
+    <link rel="stylesheet" href="../css/style.css" type="text/css">
+    <link rel=import href="webcomponents/txhistory-dialog.html">
+  </head>
+  <body>
+    <header class="panel">
+      <div class="controls center">
+          <span><button id="add-addresses-button" data-tr=wallet.showAddAddressesDialog>Add new Address/es</button></span>
+          <span><button id="fetch-all-txns" data-tr=wallet.fetchAllTransactions>Fetch all Transactions</button></span>
+          <span><button onclick="removeAllTransactions()" data-tr=wallet.removeAllTransactions disabled>Remove all Transactions</button></span>
+          <span><button id="export-alll-txns" data-tr=wallet.exportAllTransactions>Export all Transactions</button></span>
+          <span><button id="settings-button" data-tr=wallet.showSettingsDialogButton>Settings</button></span>
+      </div>
+    </header>
+    <div class="container">
+      <div class="col-addresses" id="addresses">
+        <div class="address-header">
+          <h2>Addresses</h2>
+        </div>
+        <div id="addrList" class="tabContentBody">
+        </div>
+      </div>
+      <div class="col-transactions" id="transactions">
+        <div class="transaction-header">
+          <h2>Transactions</h2>
+        </div>
+        <div id=txList>
+        </div>
+      </div>
+    </div>
+    <template id=addrItemTemplate>
+      <div class=addrItem>
+          <div class="addrInfo opensans">
+              <div class=addrNameLine>
+                  <img class=addrDetailButton src="../assets/About_icon_(The_Noun_Project).svg" />
+                  <span class=addrText></span>
+              </div>
+              <span class="addrName"></span>
+          </div>
+      </div>
+    </template>
+    <template id=txItemTemplate>
+      <div class="txItem opensans">
+          <span class="txId"></span>
+          <span class=txDate></span>
+          <div class=filler></div>
+          <span class=txBalance><span class=txBalanceAmount></span> ZEN</span>
+      </div>
+    </template>
+    <div class="currentTask opensans">
+      <span class="currentTaskwindow" id="currenttaskwindowtext"></span>
+    </div>
+    <footer class="footer">
+      <div class="center">
+        <button id="remove-address" disabled>Remove Address</button>
+        <button id="fetch-single-txns" disabled>Fetch Single Address Transactions</button>
+        <button id="export-single-addr-txns" disabled>Export Single Address Transactions</button>
+      </div>
+    </footer>
+
+<template id="showAddAddressesDialogTemplate">
+  <txhistory-dialog>
+    <h2 slot=headerText data-tr=wallet.addAddressLabel.label>Add Address</h2>
+    Address:
+    <input type="text" name="address" value="" maxlength="200" style="width:800px">
+    <div id="ifFile" style="visibility:hidden">
+      <button id="add-file">Open File</button>
+    </div>
+    <br>
+    Select type of address input:
+    <br>
+    <input type="radio" name="addressType" id="single" onclick="javascript:fileCheck();">Single address
+    <input type="radio" name="addressType" id="xpub" onclick="javascript:fileCheck();"> xpub address
+    <input type="radio" name="addressType" id="file" onclick="javascript:fileCheck();">file
+    <br>
+    <br>
+    <div id="submitNewAddress" style="align: right">
+      <button id="add-address">Submit</button>
+    </div>
+    </div>
+      <button id="closeBtn">Close Window</button>
+    </div>
+  </txhistory-dialog>
+</template>
+
+  </body>
+  <script>
+    require('../js/renderer');
+  </script>
+</html>

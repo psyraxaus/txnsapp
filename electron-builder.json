@@ -1,0 +1,65 @@
+{
+  "appId": "io.zen-solutions.txnsapp",
+  "afterSign": "build-res/scripts/notarize.js",
+  "productName": "Horizen Transaction Application",
+  "copyright": "Johncarlo Maddalena",
+  "directories": {
+    "output": "out",
+    "buildResources": "build-res"
+  },
+  "files": [
+    "package.json",
+    "app/**/*",
+    "node_modules"
+  ],
+  "dmg": {
+    "background": null,
+    "sign": false,
+    "backgroundColor": "#ffffff",
+    "window": {
+        "width": "400",
+        "height": "300"
+    },
+    "contents": [
+        {
+            "x": 100,
+            "y": 100
+        },
+        {
+            "x": 300,
+            "y": 100,
+            "type": "link",
+            "path": "/Applications"
+        }
+    ]
+  },
+  "mac": {
+    "target": "dmg",
+    "hardenedRuntime": true,
+    "gatekeeperAssess": false,
+    "entitlements": "build-res/entitlements.mac.plist",
+    "entitlementsInherit": "build-res/entitlements.mac.plist",
+    "category": "public.app-category.utilities",
+    "icon": "build-res/icon.icns",
+    "publish": null
+  },
+  "win": {
+    "target": {
+      "target": "nsis",
+      "arch": [
+        "x64"
+      ]
+    },
+    "icon": "build-res/icon.ico",
+    "publish": null
+  },
+  "linux": {
+    "target": [
+      "AppImage",
+      "deb"
+    ],
+    "icon": "build-res/icon.icns",
+    "category": "Office",
+    "publish": null
+  }
+}
