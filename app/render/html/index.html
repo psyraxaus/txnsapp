@@ -29,12 +29,12 @@
         <div class="transaction-header">
           <h2>Transactions</h2>
         </div>
-        <div id=txList>
+        <div id="txList" class="tabContentBody">
         </div>
       </div>
     </div>
     <template id=addrItemTemplate>
-      <div class=addrItem>
+      <div class="addrItem">
           <div class="addrInfo opensans">
               <div class=addrNameLine>
                   <img class=addrDetailButton src="../assets/About_icon_(The_Noun_Project).svg" />
@@ -57,37 +57,11 @@
     </div>
     <footer class="footer">
       <div class="center">
-        <button id="remove-address" disabled>Remove Address</button>
-        <button id="fetch-single-txns" disabled>Fetch Single Address Transactions</button>
-        <button id="export-single-addr-txns" disabled>Export Single Address Transactions</button>
+        <button id="remove-address-button" disabled>Remove Address</button>
+        <button id="fetch-single-txns-button" disabled>Fetch Single Address Transactions</button>
+        <button id="export-single-addr-txns-button" disabled>Export Single Address Transactions</button>
       </div>
     </footer>
-
-<template id="showAddAddressesDialogTemplate">
-  <txhistory-dialog>
-    <h2 slot=headerText data-tr=wallet.addAddressLabel.label>Add Address</h2>
-    Address:
-    <input type="text" name="address" value="" maxlength="200" style="width:800px">
-    <div id="ifFile" style="visibility:hidden">
-      <button id="add-file">Open File</button>
-    </div>
-    <br>
-    Select type of address input:
-    <br>
-    <input type="radio" name="addressType" id="single" onclick="javascript:fileCheck();">Single address
-    <input type="radio" name="addressType" id="xpub" onclick="javascript:fileCheck();"> xpub address
-    <input type="radio" name="addressType" id="file" onclick="javascript:fileCheck();">file
-    <br>
-    <br>
-    <div id="submitNewAddress" style="align: right">
-      <button id="add-address">Submit</button>
-    </div>
-    </div>
-      <button id="closeBtn">Close Window</button>
-    </div>
-  </txhistory-dialog>
-</template>
-
   </body>
   <script>
     require('../js/renderer');

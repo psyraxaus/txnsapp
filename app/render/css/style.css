@@ -212,12 +212,18 @@ footer {
     align-items: stretch;
 }
 
-#addrList > :not(:first-child) {
-    margin-top: 5px;
-}
-
 #addrList > :nth-child(odd) {
   background: #C1CDCD;
+  padding: 10px;
+}
+
+#addrList > :nth-child(odd).active {
+  background: #26db8d;
+  padding: 10px;
+}
+
+#addrList > :nth-child(odd):hover {
+  background: #26db8d;
   padding: 10px;
 }
 
@@ -225,9 +231,23 @@ footer {
   padding: 10px;
 }
 
+#addrList > :nth-child(even).active {
+  background: #26db8d;
+  padding: 10px;
+}
+
+#addrList > :nth-child(even):hover {
+  background: #26db8d;
+  padding: 10px;
+}
+
 .addrItem {
   flex-shrink: 0;
   display: flex;
+}
+
+.addrInfo:hover {
+  background-color: #26db8d;
 }
 
 .addrItem:focus {
@@ -277,7 +297,17 @@ footer {
   background: #C1CDCD;
 }
 
+#txList > :nth-child(odd):hover {
+  background: #26db8d;
+  padding: 10px;
+}
+
 #txList > :nth-child(even) {
+  padding: 10px;
+}
+
+#txList > :nth-child(even):hover {
+  background: #26db8d;
   padding: 10px;
 }
 

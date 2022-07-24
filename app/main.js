@@ -62,26 +62,6 @@ app.on('ready', () => {
     mainWindow.show();
   });
 
-  mainWindow.on('close', (event) => {
-    if (mainWindow.isDocumentEdited()) {
-      event.preventDefault();
-
-      const result = dialog.showMessageBox(mainWindow, {
-        type: 'warning',
-        title: 'Quit with Unsaved Changes?',
-        message: 'Your changes will be lost permanently if you do not save.',
-        buttons: [
-          'Quit Anyway',
-          'Cancel',
-        ],
-        cancelId: 1,
-        defaultId: 0
-      });
-
-      if (result === 0) mainWindow.destroy();
-    }
-  });
-
   mainWindow.on('closed', () => {
     windows.delete(mainWindow);
     mainWindow = null;
@@ -532,7 +512,6 @@ const getTransactionsByAddress = exports.getTransactionsByAddress = async (targe
 	targetWindow.webContents.send('address-transactions', txList);
 	databaseClose(db);
 }
-
 
 const getExistingTxList = async (targetWindow) => {
 	let txArray = [];

@@ -1,13 +1,12 @@
-const { ipcRenderer } = require('electron');
-const remote = require("@electron/remote"); //.require("@electron/remote/main").enable(window.webContents);
-const { Menu } = remote;
+const { ipcRenderer, shell } = require('electron');
+const remote = require("@electron/remote");
+const { Menu, MenuItem } = remote;
 const path = require('path');
 const mainProcess = remote.require('./main');
 const currentWindow = require('@electron/remote').getCurrentWindow();
-const { BrowserWindow } = require('@electron/remote'); //.BrowserWindow;
+const { BrowserWindow } = require('@electron/remote');
 const { DateTime } = require("luxon");
 
-const addressList = document.querySelector('.addresses-text');
 const addrListNode = document.getElementById("addrList");
 const txListNode = document.getElementById("txList");
 const transactionView = document.querySelector('.transactions-text');
@@ -17,21 +16,54 @@ const fetchAllTransactionsButton = document.querySelector('#fetch-all-txns');
 const removeAllTransactionsButton = document.querySelector('#remove-all-txns');
 const exportAllTransactionsButton = document.querySelector('#export-alll-txns');
 const settingsButton = document.querySelector('#settings-button');
+const removeAddresButton = document.querySelector('#remove-address-button');
+const divs = addrListNode.querySelectorAll('.addrItem');
 
 let filePath = null;
 let settings;
-
-const addressContextMenu = Menu.buildFromTemplate([
-  { label: 'View Address on Explorer', click() { } },
-  { type: 'separator'},
-  { label: 'Copy', role: 'copy' },
-  { label: 'Select All', role: 'selectall' }
-]);
+let selectedAddress;
 
 addrListNode.addEventListener('contextmenu', (event) => {
   event.preventDefault();
-  addressContextMenu.popup();
+  var clicked = event.target;
+  let addrStr = clicked.parentNode.id;
+  if (!addrStr) {
+    addrStr = clicked.parentNode.parentNode.id;
+    if (!addrStr) {
+      addrStr = clicked.parentNode.parentNode.parentNode.id;
+    }
+  } else if (addrStr === 'addrList') {
+    addrStr = clicked.id
+  }
+  const menu = new Menu();
+  menu.append(new MenuItem(
+    { label: 'View Address on Explorer', click() {
+      shell.openExternal(`${settings.explorerUrl}/address/${addrStr}`)
+    } }
+  ));
+  menu.popup({ window: remote.getCurrentWindow() })
 });
+
+txListNode.addEventListener('contextmenu', (event) => {
+  event.preventDefault();
+  var clicked = event.target;
+  let txidStr = clicked.dataset.txid;
+  if (!txidStr) {
+    txidStr = clicked.parentNode.dataset.txid;
+    if (!txidStr) {
+      txidStr = clicked.parentNode.parentNode.dataset.txid;
+    }
+  }
+
+  console.log(txidStr)
+  const menu = new Menu();
+  menu.append(new MenuItem(
+    { label: 'View Transaction on Explorer', click() {
+      shell.openExternal(`${settings.explorerUrl}/tx/${txidStr}`)
+    } }
+  ));
+  menu.popup({ window: remote.getCurrentWindow() })
+})
 
 fetchAllTransactionsButton.addEventListener('click', () => {
   event.preventDefault();
@@ -41,6 +73,11 @@ fetchAllTransactionsButton.addEventListener('click', () => {
 exportAllTransactionsButton.addEventListener('click', () => {
   event.preventDefault();
   mainProcess.saveExportedTransactions(currentWindow, settings.csvFormat);
+})
+
+removeAddresButton.addEventListener('click', () => {
+  event.preventDefault();
+  console.log(selectedAddress)
 })
 
 addAddressesButton.addEventListener('click', () => {
@@ -64,7 +101,6 @@ addAddressesButton.addEventListener('click', () => {
   remote.require("@electron/remote/main").enable(win.webContents);
 
   win.webContents.on('did-finish-load', () => {
-    win.webContents.send('message', 'This is a message from the renderer process to the second window.')
   });
 
 
@@ -110,15 +146,14 @@ settingsButton.addEventListener('click', () => {
 
 ipcRenderer.on('ready', async(event) => {
   mainProcess.loadSettings(currentWindow);
-//  currentTaskwindowText.innerHTML = `Current API URL: ${settings.apiUrl}`;
 });
 
 ipcRenderer.on('new-addresses', (event, newAddressItems) => {
-//  mainProcess.getAddressList(currentWindow);
   for (let i = 0; i < newAddressItems.length; i++) {
     const addrItem = formatAddrItem(newAddressItems[i]);
     addrListNode.appendChild(addrItem);
   }
+  _highlightAddr();
 });
 
 ipcRenderer.on('task-running', (event, message) => {
@@ -143,6 +178,7 @@ ipcRenderer.on('addresses-loaded', (event, addressItems) => {
     const addrItem = formatAddrItem(addressItems[i]);
     addrListNode.appendChild(addrItem);
   }
+  _highlightAddr();
 })
 
 ipcRenderer.on('address-transactions', (event, transactionItems) => {
@@ -156,11 +192,12 @@ ipcRenderer.on('address-transactions', (event, transactionItems) => {
 const formatAddrItem = (addrObj) => {
     const addrItem = cloneTemplate("addrItemTemplate");
     addrItem.dataset.addr = addrObj.address;
+    addrItem.id = addrObj.address;
 
     setAddressNodeName(addrObj, addrItem.getElementsByClassName("addrName")[0]);
     addrItem.getElementsByClassName("addrText")[0].textContent = formatAddressInList(addrObj.address);
-    addrItem.getElementsByClassName("addrNameLine")[0].addEventListener("click", () => {
-//      addrItem.style.backgroundColor = "#26db8d";
+    addrItem.addEventListener("click", () => {
+      const addrAttr = addrItem.getAttribute('data-addr');
       mainProcess.getTransactionsByAddress(currentWindow, addrObj.address);
     });
 
@@ -179,7 +216,7 @@ const createTxItem = (txObj, newTx = false) => {
     if (newTx) {
         node.classList.add("txItemNew");
     }
-    node.addEventListener("click", () => showTxDetail(txObj));
+//    node.addEventListener("click", () => showTxDetail(txObj));
     return node;
 }
 
@@ -237,9 +274,9 @@ const fixLinks = (parent = document) => {
 
 const setAddressNodeName = (addrObj, addrNode) => {
     if (addrObj.walletsource) {
-        setNodeTrText(addrNode, null, `Source: ${addrObj.walletsource}`);
+        setNodeTrText(addrNode, addrObj.address, null, `Source: ${addrObj.walletsource}`);
     } else {
-        setNodeTrText(addrNode, "wallet.tabOverview.unnamedAddress", "Unnamed address");
+        setNodeTrText(addrNode, addrObj.address, "wallet.tabOverview.unnamedAddress", "Unnamed address");
     }
 }
 
@@ -281,9 +318,10 @@ function deepClone(obj) {
     return JSON.parse(JSON.stringify(obj));
 }
 
-function setNodeTrText(node, key, defaultVal) {
+function setNodeTrText(node, address, key, defaultVal) {
     if (key) {
         node.dataset.tr = key;
+        node.id = address;
         node.textContent = tr(key, defaultVal);
     } else {
         delete node.dataset.tr;
@@ -294,7 +332,6 @@ function setNodeTrText(node, key, defaultVal) {
 function tr(key, defaultVal) {
     return (settings && settings.lang) ? translate(langDict, key, defaultVal) : defaultVal;
 }
-
 
 function formatEpochTime(epochSeconds) {
     return DateTime.fromMillis(epochSeconds).toLocaleString(DateTime.DATETIME_MED);
@@ -318,16 +355,11 @@ function formatBalance(balance, localeTag = undefined) {
     return parseFloat(balance).toLocaleString(localeTag, {minimumFractionDigits: 8, maximumFractionDigits: 8});
 }
 
-const _highlightLink = () => {
-  let active = null, colour = '#84DFC1';
-  if (this.attachEvent) this.attachEvent('onunload', function () {
-    active = null;
+const _highlightAddr = () => {
+  document.querySelectorAll('.addrItem').forEach(function (el) {
+    el.addEventListener('click', function (e) {
+      document.querySelectorAll('.addrItem').forEach(x => x.classList.remove('active'));
+      e.currentTarget.classList.toggle('active');
+    });
   });
-  return function (element) {
-    if ((active != element) && element.style) {
-      if (active) active.style.backgroundColor = '';
-      element.style.backgroundColor = colour;
-      active = element;
-    }
-  }
 };
