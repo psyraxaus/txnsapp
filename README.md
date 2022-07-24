@@ -10,6 +10,11 @@ The addresses can be entered either individually, using an xpub (available from 
 
 Please note that the xpub and all addresses are stored locally on you computer and only the publicly visible addresses are sent across the internet to get the transaction data.
 
+## Database File Location
+Mac: ~/Library/Application Support/HorizenTxHistoryApp
+Linux: ~/.HorizenTxHistoryApp
+Windows: %APPDATA%\HorizenTxHistoryApp
+
 ## Exporting transactions
 
 Transactions can be exported to csv in many different formats for online taxation services.
