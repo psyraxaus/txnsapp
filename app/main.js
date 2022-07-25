@@ -596,7 +596,7 @@ async function _fetchUnknownTransactions(addrObjs, knownTxIds, targetWindow) {
     let info = await apiGet("/addr/" + obj.address);
 		let address = info.addrStr;
     if (info.txAppearances) {
-      for (let i = 0; i < Math.ceil(info.txAppearances / 10); i+=10) {
+      for (let i = 0; i < Math.ceil(info.txAppearances); i+=10) {
         const txIdSet = new Set();
         let db = new sqlite3.Database(dbPath, (err) => {
           if (err) {
