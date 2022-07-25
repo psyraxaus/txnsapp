@@ -12,7 +12,9 @@ Please note that the xpub and all addresses are stored locally on you computer a
 
 ## Database File Location
 Mac: ~/Library/Application Support/HorizenTxHistoryApp
+
 Linux: ~/.HorizenTxHistoryApp
+
 Windows: %APPDATA%\HorizenTxHistoryApp
 
 ## Exporting transactions
