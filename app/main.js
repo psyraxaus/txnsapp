@@ -116,7 +116,7 @@ const saveExportedTransactions  = exports.saveExportedTransactions = (targetWind
 const _saveExportedFile = async (targetWindow, file, csvFormat) => {
 	let db = new sqlite3.Database(dbPath, (err) => {
 		if (err) {
-			dbErrorBox(err, 'connecting');
+			dbErrorBox(err, 'connecting to');
 		}
 	});
   let tobexported;
@@ -175,7 +175,7 @@ const saveSettings = exports.saveSettings = async(targetWindow) => {
   const b64settings = Buffer.from(JSON.stringify(settings)).toString("base64");
   let db = new sqlite3.Database(dbPath, (err) => {
     if (err) {
-      dbErrorBox(err, 'connecting');
+      dbErrorBox(err, 'connecting to');
     }
   });
   db.run("INSERT OR REPLACE INTO settings (name, value) values ('settings', ?)",b64settings);
@@ -184,12 +184,12 @@ const saveSettings = exports.saveSettings = async(targetWindow) => {
 const loadSettings = exports.loadSettings = async(targetWindow) => {
   let db = new sqlite3.Database(dbPath, (err) => {
     if (err) {
-      dbErrorBox(err, 'connecting');
+      dbErrorBox(err, 'connecting to');
     }
   });
   db.all(`SELECT value FROM settings`, function(err,rows){
     if (err) {
-      dbErrorBox(err, 'reading existing settings')
+      dbErrorBox(err, 'reading existing settings from')
     }
     if (rows.length === 0) {
       setSettings(targetWindow, defaultSettings);
@@ -203,7 +203,7 @@ const addSingleAddress = exports.addSingleAddress = async(targetWindow, addressT
 	const newAddresses = [];
 	let db = new sqlite3.Database(dbPath, (err) => {
 		if (err) {
-			dbErrorBox(err, 'connecting');
+			dbErrorBox(err, 'connecting to');
 		}
 	});
 	let error = bitcore.Address.getValidationError(addressText, 'livenet');
@@ -232,7 +232,7 @@ const addSingleAddress = exports.addSingleAddress = async(targetWindow, addressT
 			if (info.txApperances > 0) {
 				db.run(`INSERT INTO wallet(address, description, walletsource) VALUES(?,?,?)`, [addressText,descriptionText,walletSourceText], function(err) {
 					if (err) {
-						dbErrorBox(err, 'writing');
+						dbErrorBox(err, 'writing to');
 					}
 				})
 				newAddresses.push({
@@ -242,20 +242,21 @@ const addSingleAddress = exports.addSingleAddress = async(targetWindow, addressT
 				})
 			};
 		}
+    mainWindow.webContents.send('new-addresses', newAddresses);
+    targetWindow.webContents.send('searchDerivationPath', `All addresses with a transaction history have been added.`);
 	} else {
     targetWindow.webContents.send('searchDerivationPath', `Error: The addresses entered is not a valid Horizen address.`);
 	};
 	databaseClose(db);
 
-	mainWindow.webContents.send('new-addresses', newAddresses);
-	targetWindow.webContents.send('searchDerivationPath', `All addresses with a transaction history have been added.`);
+
 }
 
 const deriveAddressesFromXpub = exports.deriveAddressesFromXpub = async (targetWindow, xpub, walletsource, description) => {
 	const newAddresses = [];
 	let db = new sqlite3.Database(dbPath, (err) => {
 		if (err) {
-			dbErrorBox(err, 'connecting');
+			dbErrorBox(err, 'connecting to');
 		}
 	});
 
@@ -311,7 +312,7 @@ const deriveAddressesFromXpub = exports.deriveAddressesFromXpub = async (targetW
 				if (info.txApperances > 0) {
 					db.run(`INSERT INTO wallet(address, xpub, derivation, description, walletsource) VALUES(?,?,?,?,?)`, [address.toString(),xpub,derivation,description,walletsource], function(err) {
 						if (err) {
-							dbErrorBox(err, 'writing');
+							dbErrorBox(err, 'writing to');
 						}
 					})
 					newAddresses.push({
@@ -339,7 +340,7 @@ const loadAddressesFromFile = exports.loadAddressesFromFile = async (targetWindo
 	let newAddresses = [];
 	let db = new sqlite3.Database(dbPath, (err) => {
 		if (err) {
-			dbErrorBox(err, 'connecting');
+			dbErrorBox(err, 'connecting to');
 		}
 	});
 	const newAddrObjs = await csv().fromFile(file);
@@ -386,7 +387,7 @@ const loadAddressesFromFile = exports.loadAddressesFromFile = async (targetWindo
 			if (info.txApperances > 0) {
 				db.run(`INSERT INTO wallet(address, walletsource, description) VALUES(?,?,?)`, [newAddressesArray[i].address,newAddressesArray[i].source,newAddressesArray[i].description], function(err) {
 					if (err) {
-						dbErrorBox(err, 'writing');
+						dbErrorBox(err, 'writing to');
 					}
 				});
 				newAddresses.push({
@@ -401,6 +402,29 @@ const loadAddressesFromFile = exports.loadAddressesFromFile = async (targetWindo
 	mainWindow.webContents.send('new-addresses', newAddresses);
 	targetWindow.webContents.send('searchDerivationPath', `All addresses with a transaction history have been added.`);
   targetWindow.webContents.send('completed-import');
+}
+
+const removeSingleAddress = exports.removeSingleAddress = async (targetWindow, address) => {
+  let db = new sqlite3.Database(dbPath, (err) => {
+    if (err) {
+      dbErrorBox(err, 'connecting to');
+    }
+  });
+
+  db.run("DELETE FROM wallet WHERE address=(?)", address, function(err) {
+    if (err) {
+			dbErrorBox(err, 'deleting from');
+		}
+  })
+
+  db.run("DELETE FROM transactions WHERE address=(?)", address, function(err) {
+    if (err) {
+			dbErrorBox(err, 'deleting from');
+		}
+  })
+  let existingAddresses = await _db_all(db, `SELECT address, description, walletsource FROM wallet`);
+  targetWindow.webContents.send('addresses-loaded', existingAddresses);
+  databaseClose(db);
 }
 
 var documentPath = app.getPath('appData');
@@ -450,7 +474,7 @@ const databaseClose = (db) => {
 const dbErrorBox = (err, errorType) => {
 	const result = dialog.showMessageBox(mainWindow, {
 		type: 'error',
-		title: `Error ${errorType} to database`,
+		title: `Error ${errorType} database`,
 		message: `An error occurred when accessing the database. \n ${err.message})`,
 		buttons: [
 			'OK',
@@ -463,7 +487,7 @@ async function _db_all(db, query){
   return new Promise(function(resolve,reject){
     db.all(query, function(err,rows){
 			if (err) {
-				dbErrorBox(err, 'reading existing addresses')
+				dbErrorBox(err, 'reading existing addresses from')
 			}
 			resolve(rows);
     });
@@ -494,7 +518,7 @@ async function _checkExisting(db, newAddress) {
 const getAddressList = exports.getAddressList = async (targetWindow) => {
 	let db = new sqlite3.Database(dbPath, (err) => {
 		if (err) {
-			dbErrorBox(err, 'connecting');
+			dbErrorBox(err, 'connecting to');
 		}
 	});
 	let existingAddresses = await _db_all(db, `SELECT address, description, walletsource FROM wallet`);
@@ -505,7 +529,7 @@ const getAddressList = exports.getAddressList = async (targetWindow) => {
 const getTransactionsByAddress = exports.getTransactionsByAddress = async (targetWindow, address) => {
 	let db = new sqlite3.Database(dbPath, (err) => {
 		if (err) {
-			dbErrorBox(err, 'connecting');
+			dbErrorBox(err, 'connecting to');
 		}
 	});
 	let txList = await _db_all(db, `SELECT * FROM transactions WHERE address = '${address}'`);
@@ -517,7 +541,7 @@ const getExistingTxList = async (targetWindow) => {
 	let txArray = [];
 	let db = new sqlite3.Database(dbPath, (err) => {
 		if (err) {
-			dbErrorBox(err, 'connecting');
+			dbErrorBox(err, 'connecting to');
 		}
 	});
 	let existingTransactions = await _db_all(db, `SELECT address,txid FROM transactions`);
@@ -528,7 +552,7 @@ const getExistingTxList = async (targetWindow) => {
 const fetchAllTransactions = exports.fetchAllTransactions = async (targetWindow) => {
 	let db = new sqlite3.Database(dbPath, (err) => {
 		if (err) {
-			dbErrorBox(err, 'connecting');
+			dbErrorBox(err, 'connecting to');
 		}
 	});
 	let addrObjs = await _db_all(db, `SELECT address FROM wallet`);
@@ -568,15 +592,13 @@ async function _fetchUnknownTransactions(addrObjs, knownTxIds, targetWindow) {
 		targetWindow.webContents.send('task-running', `Fetching transaction information for ${obj.address}`);
 
     let info = await apiGet("/addr/" + obj.address);
-
 		let address = info.addrStr;
-    if (info.txAppearances > 1000) {
-      let noPages = Math.ceil(info.txAppearances / 10)
-      for (let i = 0; i < Math.ceil(info.txAppearances); i+=10) {
+    if (info.txAppearances) {
+      for (let i = 0; i < Math.ceil(info.txAppearances / 10); i+=10) {
         const txIdSet = new Set();
         let db = new sqlite3.Database(dbPath, (err) => {
           if (err) {
-            dbErrorBox(err, 'connecting');
+            dbErrorBox(err, 'connecting to');
           }
         });
         let infoPg = await apiGet(`/addr/${obj.address}?from=${i}&to=${i+10}`)
@@ -602,7 +624,7 @@ async function _fetchUnknownTransactions(addrObjs, knownTxIds, targetWindow) {
         async.eachOf(newTransactions, function(tx) {
           db.run(`INSERT INTO transactions (txid, time, address, vins, vouts, amount, fees, block, currency) VALUES (?,?,?,?,?,?,?,?,?)`, [tx.txid, tx.time, tx.address, tx.vins, tx.vouts, tx.amount, tx.fees, tx.block, 'ZEN'], function(err) {
             if (err) {
-              dbErrorBox(err, 'writing');
+              dbErrorBox(err, 'writing to');
             }
           })
           count++;

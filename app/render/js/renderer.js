@@ -17,7 +17,6 @@ const removeAllTransactionsButton = document.querySelector('#remove-all-txns');
 const exportAllTransactionsButton = document.querySelector('#export-alll-txns');
 const settingsButton = document.querySelector('#settings-button');
 const removeAddresButton = document.querySelector('#remove-address-button');
-const divs = addrListNode.querySelectorAll('.addrItem');
 
 let filePath = null;
 let settings;
@@ -55,7 +54,6 @@ txListNode.addEventListener('contextmenu', (event) => {
     }
   }
 
-  console.log(txidStr)
   const menu = new Menu();
   menu.append(new MenuItem(
     { label: 'View Transaction on Explorer', click() {
@@ -77,7 +75,7 @@ exportAllTransactionsButton.addEventListener('click', () => {
 
 removeAddresButton.addEventListener('click', () => {
   event.preventDefault();
-  console.log(selectedAddress)
+  mainProcess.removeSingleAddress(currentWindow, selectedAddress)
 })
 
 addAddressesButton.addEventListener('click', () => {
@@ -174,10 +172,14 @@ ipcRenderer.on('file-save', (event, filePath) => {
 })
 
 ipcRenderer.on('addresses-loaded', (event, addressItems) => {
+  _removeAllChildNodes(addrListNode);
+  _removeAllChildNodes(txListNode);
+
   for (let i = 0; i < addressItems.length; i++) {
     const addrItem = formatAddrItem(addressItems[i]);
     addrListNode.appendChild(addrItem);
   }
+  removeAddresButton.disabled = true;
   _highlightAddr();
 })
 
@@ -199,8 +201,9 @@ const formatAddrItem = (addrObj) => {
     addrItem.addEventListener("click", () => {
       const addrAttr = addrItem.getAttribute('data-addr');
       mainProcess.getTransactionsByAddress(currentWindow, addrObj.address);
+      selectedAddress = addrObj.address;
+      removeAddresButton.disabled = false;
     });
-
     return addrItem;
 };
 
@@ -363,3 +366,9 @@ const _highlightAddr = () => {
     });
   });
 };
+
+const _removeAllChildNodes = (parent) => {
+    while (parent.firstChild) {
+        parent.removeChild(parent.firstChild);
+    }
+}
