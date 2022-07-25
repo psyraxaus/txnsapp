@@ -15,6 +15,10 @@ const {List} = require("immutable");
 const remoteMain = require("@electron/remote/main")
 remoteMain.initialize()
 
+require('update-electron-app')({
+  updateInterval: '1 hour')
+})
+
 const windows = new Set();
 const openFiles = new Map();
 let mainWindow;

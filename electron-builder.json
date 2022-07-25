@@ -34,7 +34,10 @@
     ]
   },
   "mac": {
-    "target": "dmg",
+    "target": [
+      "dmg",
+      "zip"
+    ],
     "hardenedRuntime": true,
     "gatekeeperAssess": false,
     "entitlements": "build-res/entitlements.mac.plist",

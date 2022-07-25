@@ -1,50 +1,51 @@
 {
-  "name": "txnsapp",
-  "version": "1.0.3",
-  "description": "Application to fetch the transaction history for Horizen addresses and export to various online cointracking services",
-  "main": "app/main.js",
-  "dependencies": {
-      "@electron/remote": "^2.0.5",
-      "async": "^3.2.3",
-      "axios": "^0.26.1",
-      "bitcore-lib-zen": "git+https://github.com/HorizenOfficial/bitcore-lib-zen.git",
-      "csvtojson": "^2.0.10",
-      "dotenv": "^16.0.1",
-      "immutable": "^4.0.0",
-      "json2csv": "^5.0.7",
-      "luxon": "^2.3.1",
-      "path": "^0.12.7",
-      "prop-types": "^15.8.1",
-      "sqlite3": "^5.0.2"
-  },
-  "scripts": {
-      "start": "electron .",
-      "test": "echo \"Error: no test specified\" && exit 1",
-      "postinstall": "electron-builder install-app-deps",
-      "pack-mac": "electron-builder -m",
-      "pack-win": "electron-builder -w",
-      "pack-lin": "electron-builder -l",
-      "pack-all": "electron-builder -mwl",
-      "publish": "electron-builder --publish always"
-  },
+    "name": "txnsapp",
+    "version": "1.0.4",
+    "description": "Application to fetch the transaction history for Horizen addresses and export to various online cointracking services",
+    "main": "app/main.js",
+    "dependencies": {
+        "@electron/remote": "^2.0.5",
+        "async": "^3.2.3",
+        "axios": "^0.26.1",
+        "bitcore-lib-zen": "git+https://github.com/HorizenOfficial/bitcore-lib-zen.git",
+        "csvtojson": "^2.0.10",
+        "dotenv": "^16.0.1",
+        "immutable": "^4.0.0",
+        "json2csv": "^5.0.7",
+        "luxon": "^2.3.1",
+        "path": "^0.12.7",
+        "prop-types": "^15.8.1",
+        "sqlite3": "^5.0.2",
+        "update-electron-app": "^2.0.1"
+    },
+    "scripts": {
+        "start": "electron .",
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "postinstall": "electron-builder install-app-deps",
+        "pack-mac": "electron-builder -m",
+        "pack-win": "electron-builder -w",
+        "pack-lin": "electron-builder -l",
+        "pack-all": "electron-builder -mwl",
+        "publish": "electron-builder --publish always"
+    },
     "repository": {
-    "type": "git",
-    "url": "git+https://github.com/psyraxaus/txnsapp.git"
-  },
-  "keywords": [
-      "Horizen"
-  ],
-  "author": "Johncarlo Maddalena <psyrax@zen-solutions.io>",
-  "homepage": "https://github.com/psyraxaus/txnsapp",
-  "license": "MIT",
-  "devDependencies": {
-      "Q": "^1.0.0",
-      "asar": "^3.1.0",
-      "electron": "^17.1.1",
-      "electron-builder": "^23.1.0",
-      "electron-notarize": "^1.2.1",
-      "electron-prebuilt": "^1.4.13",
-      "fs-jetpack": "^4.3.1",
-      "rcedit": "^3.0.1"
-  }
+        "type": "git",
+        "url": "git+https://github.com/psyraxaus/txnsapp.git"
+    },
+    "keywords": [
+        "Horizen"
+    ],
+    "author": "Johncarlo Maddalena <psyrax@zen-solutions.io>",
+    "homepage": "https://github.com/psyraxaus/txnsapp",
+    "license": "MIT",
+    "devDependencies": {
+        "Q": "^1.0.0",
+        "asar": "^3.1.0",
+        "electron": "^17.1.1",
+        "electron-builder": "^23.1.0",
+        "electron-notarize": "^1.2.1",
+        "electron-prebuilt": "^1.4.13",
+        "fs-jetpack": "^4.3.1",
+        "rcedit": "^3.0.1"
+    }
 }
