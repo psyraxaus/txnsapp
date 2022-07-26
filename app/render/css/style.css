@@ -342,7 +342,7 @@ footer {
   padding: 10px;
 }
 
-.urlBoxes, .explorerBox, .apiBox, .bottomSection {
+.urlBoxes, .explorerBox, .apiBox, .bottomSection, .consolidate {
   width: 100%
 }
 

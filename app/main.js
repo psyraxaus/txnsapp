@@ -121,32 +121,170 @@ const _saveExportedFile = async (targetWindow, file, csvFormat) => {
 			dbErrorBox(err, 'connecting to');
 		}
 	});
+
+  const nodePayFromAddrs = [
+    "zsf45QuD75XJdm3uLftiW6pucvbhvrbhAhZ",
+    "zsoVG9Evw68te8hRAP3xPXSbx9HoH26LUYN",
+    "zsi4CcCUYtR1iNjEyjkLPjSVPzSPa4atxt9"
+  ]
+
   let tobexported;
+  let nonConsolSqlQuery;
+  let consoldateSqlQuery
 
   switch(csvFormat) {
     case "CrytotaxCalc":
       csvFields = ['Timestamp (UTC)', 'Type', 'Base Currency', 'Base Amount', 'Quote Currency', 'Quote Amount', 'Fee Currency', 'Fee Amount', 'From (Optional)', 'To (Optional)', 'ID (Optional)', 'Description (Optional)' ];
-      tobexported = await _db_all(db, `SELECT datetime(time, 'unixepoch') as 'Timestamp (UTC)', IIF(amount < 0, 'transfer-out', 'transfer-in') as Type, currency, ABS(amount) as 'Base Amount', "" AS quote_curr, "" AS quote_amount, IIF(amount < 0, currency, '') AS fee_currency, IIF(amount < 0, fees, '') AS fee_amount, vins AS "From (Optional)", vouts AS "To (Optional)", txid AS "ID (Optional)", "" AS description FROM transactions`);
+      nonConsolSqlQuery = `SELECT
+          datetime(time, 'unixepoch') as 'Timestamp (UTC)',
+          IIF(amount < 0, 'transfer-out', 'transfer-in') as Type,
+          currency AS 'Base Currency',
+          ABS(amount) as 'Base Amount',
+          "" AS 'Quote Currency',
+          "" AS 'Quote Amount',
+          IIF(amount < 0, currency, '') AS 'Fee Currency',
+          IIF(amount < 0, fees, '') AS 'Fee Amount',
+          vins AS "From (Optional)",
+          vouts AS "To (Optional)",
+          txid AS "ID (Optional)", ""
+          AS 'Description (Optional)'
+        FROM transactions
+        WHERE
+          vins <> "zsf45QuD75XJdm3uLftiW6pucvbhvrbhAhZ"
+          AND vins <> "zsoVG9Evw68te8hRAP3xPXSbx9HoH26LUYN"
+          AND vins <> "zsi4CcCUYtR1iNjEyjkLPjSVPzSPa4atxt9"`;
+
+      consoldateSqlQuery = `SELECT datetime(time, 'unixepoch') as 'Timestamp (UTC)', 'transfer-in' AS Type, currency AS 'Base Currency', SUM(amount) AS 'Base Amount', "" AS 'Quote Currency', "" AS 'Quote Amount', "" AS 'Fee Currency', "" AS 'Fee Amount', vins AS 'From (Optional)', GROUP_CONCAT(address) AS 'To (Optional)', txid AS 'ID (Optional)', "" AS 'Description (Optional)' FROM transactions`
+      allTransactionsStr = await _formatTransactionsForExport(nodePayFromAddrs, db, nonConsolSqlQuery, consoldateSqlQuery, settings.consolidateNodeTxns)
       break;
     case "Cointracking":
       csvFields = ['Type', 'Buy Amount', 'Buy Currency', 'Sell Amount', 'Sell Currency', 'Fee', 'Fee Currency', 'Exchange', 'Trade-Group', 'Comment', 'Date', "Tx-ID", "Buy Value in Account Currrency", "Sell Value in Account Currency" ];
-      tobexported = await _db_all(db, `SELECT IIF(amount < 0, 'Withdrawal', 'Deposit') as Type, IIF(amount > 0, ABS(amount), "") as 'Buy Amount', IIF(amount > 0, currency, '') as 'Buy Currency', IIF(amount < 0, ABS(amount), "") as 'Sell Amount', IIF(amount < 0, currency, '') as 'Sell Currency', IIF(amount < 0, fees, '') AS 'Fee', IIF(amount < 0, currency, '') AS 'Fee Currency',  walletsource AS "Exchange", "" AS "Trade-Group", description AS Comment, strftime('%Y-%m-%d %H:%M:%S', datetime(time, 'unixepoch')) as 'Date', txid AS "Tx-ID", "" AS "Buy Value in Account Currrency", "" AS "Sell Value in Account Currency" FROM transactions INNER JOIN wallet ON wallet.address = transactions.address`);
+
+      nonConsolSqlQuery = `SELECT
+        IIF(amount < 0, 'Withdrawal', 'Deposit') as Type,
+        IIF(amount > 0, ABS(amount), "") as 'Buy Amount',
+        IIF(amount > 0, currency, '') as 'Buy Currency',
+        IIF(amount < 0, ABS(amount), "") as 'Sell Amount',
+        IIF(amount < 0, currency, '') as 'Sell Currency',
+        IIF(amount < 0, fees, '') AS 'Fee',
+        IIF(amount < 0, currency, '') AS 'Fee Currency',
+        walletsource AS 'Exchange',
+        "" AS 'Trade-Group',
+        description AS Comment,
+        strftime('%Y-%m-%d %H:%M:%S', datetime(time, 'unixepoch')) as 'Date',
+        txid AS "Tx-ID",
+        "" AS "Buy Value in Account Currrency",
+        "" AS "Sell Value in Account Currency"
+      FROM transactions
+      INNER JOIN wallet ON wallet.address = transactions.address
+      WHERE
+        vins <> "zsf45QuD75XJdm3uLftiW6pucvbhvrbhAhZ"
+        AND vins <> "zsoVG9Evw68te8hRAP3xPXSbx9HoH26LUYN"
+        AND vins <> "zsi4CcCUYtR1iNjEyjkLPjSVPzSPa4atxt9"`;
+
+      consoldateSqlQuery = `SELECT
+          'Deposit' AS Type,
+          SUM(amount) AS 'Buy Amount',
+          currency AS 'Buy Currency',
+          "" AS 'Sell Amount',
+          "" AS 'Sell Currency',
+          "" AS 'Fee',
+          "" AS 'Fee Currency',
+          walletsource AS 'Exchange',
+          "" AS 'Trade-Group',
+          description AS Comment,
+          strftime('%Y-%m-%d %H:%M:%S', datetime(time, 'unixepoch')) as 'Date',
+          txid AS "Tx-ID",
+          "" AS "Buy Value in Account Currrency",
+          "" AS "Sell Value in Account Currency"
+        FROM transactions
+        INNER JOIN wallet ON wallet.address = transactions.address`;
+      allTransactionsStr = await _formatTransactionsForExport(nodePayFromAddrs, db, nonConsolSqlQuery, consoldateSqlQuery, settings.consolidateNodeTxns);
       break;
     case "Koinly":
       csvFields = ['Date', 'Sent Amount', 'Sent Currency', 'Received Amount', 'Received Currency', 'Fee Amount', 'Fee Currency', 'Net Worth Amount', 'Net Worth Currency', 'Label', 'Description', 'TxHash' ];
-      tobexported = await _db_all(db,`SELECT strftime('%Y-%m-%d %H:%M UTC', datetime(time, 'unixepoch')) as 'Date', IIF(amount < 0, ABS(amount), "") as 'Sent Amount', IIF(amount < 0, currency, '') AS 'Sent Currency', IIF(amount > 0, ABS(amount), "") as 'Received Amount', IIF(amount > 0, currency, '') AS 'Received Currency', IIF(amount < 0, fees, '') AS 'Fee Amount', IIF(amount < 0, currency, '') AS 'Fee Currency', "" AS 'Net Worth Amount', "" AS 'Net Worth Currency', walletsource AS 'Label', description AS 'Description', txid AS 'TxHash' FROM transactions INNER JOIN wallet ON wallet.address = transactions.address`);
+      nonConsolSqlQuery = `SELECT
+          strftime('%Y-%m-%d %H:%M UTC', datetime(time, 'unixepoch')) as 'Date',
+          IIF(amount < 0, ABS(amount), "") as 'Sent Amount',
+          IIF(amount < 0, currency, '') AS 'Sent Currency',
+          IIF(amount > 0, ABS(amount), "") as 'Received Amount',
+          IIF(amount > 0, currency, '') AS 'Received Currency',
+          IIF(amount < 0, fees, '') AS 'Fee Amount',
+          IIF(amount < 0, currency, '') AS 'Fee Currency',
+          '' AS 'Net Worth Amount',
+          '' AS 'Net Worth Currency',
+          walletsource AS 'Label',
+          description AS 'Description',
+          txid AS 'TxHash'
+        FROM transactions
+        INNER JOIN wallet ON wallet.address = transactions.address
+        WHERE
+          vins <> "zsf45QuD75XJdm3uLftiW6pucvbhvrbhAhZ"
+          AND vins <> "zsoVG9Evw68te8hRAP3xPXSbx9HoH26LUYN"
+          AND vins <> "zsi4CcCUYtR1iNjEyjkLPjSVPzSPa4atxt9"`;
+
+      consoldateSqlQuery = `SELECT
+          strftime('%Y-%m-%d %H:%M UTC', datetime(time, 'unixepoch')) as 'Date',
+          '' as 'Sent Amount',
+          '' AS 'Sent Currency',
+          SUM(amount) as 'Received Amount',
+          currency AS 'Received Currency',
+          '' AS 'Fee Amount',
+          '' AS 'Fee Currency',
+          '' AS 'Net Worth Amount',
+          '' AS 'Net Worth Currency',
+          walletsource AS 'Label',
+          description AS 'Description',
+          txid AS "TxHash"
+        FROM transactions
+        INNER JOIN wallet ON wallet.address = transactions.address`;
+        allTransactionsStr = await _formatTransactionsForExport(nodePayFromAddrs, db, nonConsolSqlQuery, consoldateSqlQuery, settings.consolidateNodeTxns);
       break;
     case "Accointing":
       csvFields = ['transactionType', 'date', 'inBuyAmount', 'inBuyAsset', 'outSellAmount', 'outSellAsset', 'feeAmount (optional)', 'feeAsset (optional)', 'classification (optional)', 'operationId (optional)', 'comments (optional)' ];
-      tobexported = await _db_all(db, `SELECT IIF(amount > 0, 'deposit', 'withdraw') as transactionType, strftime('%Y/%m/%d %H:%M:%S', datetime(time, 'unixepoch')) as 'date', IIF(amount > 0, ABS(amount), "") as 'inBuyAmount', IIF(amount > 0, currency, '') AS 'inBuyAsset', IIF(amount < 0, ABS(amount), "") as 'outSellAmount', IIF(amount < 0, currency, '') AS 'outSellAsset', IIF(amount < 0, fees, '') AS 'feeAmount (optional)', IIF(amount < 0, currency, '') AS 'feeAsset (optional)', "" AS 'classification (optional)', txid AS 'operationId (optional)', walletsource AS 'comments (optional)' FROM transactions INNER JOIN wallet ON wallet.address = transactions.address`);
+      nonConsolSqlQuery = `SELECT
+          IIF(amount > 0, 'deposit', 'withdraw') as transactionType,
+          strftime('%Y/%m/%d %H:%M:%S', datetime(time, 'unixepoch')) as 'date',
+          IIF(amount > 0, ABS(amount), "") as 'inBuyAmount',
+          IIF(amount > 0, currency, '') AS 'inBuyAsset',
+          IIF(amount < 0, ABS(amount), "") as 'outSellAmount',
+          IIF(amount < 0, currency, '') AS 'outSellAsset',
+          IIF(amount < 0, fees, '') AS 'feeAmount (optional)',
+          IIF(amount < 0, currency, '') AS 'feeAsset (optional)',
+          "" AS 'classification (optional)',
+          txid AS 'operationId (optional)',
+          walletsource AS 'comments (optional)'
+        FROM transactions
+        INNER JOIN wallet ON wallet.address = transactions.address
+        WHERE
+          vins <> "zsf45QuD75XJdm3uLftiW6pucvbhvrbhAhZ"
+          AND vins <> "zsoVG9Evw68te8hRAP3xPXSbx9HoH26LUYN"
+          AND vins <> "zsi4CcCUYtR1iNjEyjkLPjSVPzSPa4atxt9"`;
+
+      consoldateSqlQuery = `SELECT
+          'deposit' as transactionType,
+          strftime('%Y/%m/%d %H:%M:%S', datetime(time, 'unixepoch')) as 'date',
+          SUM(amount) as 'inBuyAmount',
+          currency AS 'inBuyAsset',
+          '' as 'outSellAmount',
+          '' AS 'outSellAsset',
+          '' AS 'feeAmount (optional)',
+          '' AS 'feeAsset (optional)',
+          "" AS 'classification (optional)',
+          txid AS 'operationId (optional)',
+          walletsource AS 'comments (optional)'
+        FROM transactions
+        INNER JOIN wallet ON wallet.address = transactions.address`;
+        allTransactionsStr = await _formatTransactionsForExport(nodePayFromAddrs, db, nonConsolSqlQuery, consoldateSqlQuery, settings.consolidateNodeTxns);
       break;
     case "Unformatted":
       csvFields = ['Timestamp (UTC)', 'Type','Amount Transacted', 'Currency', 'Fee Amount', 'Fee Currency', 'From Address', 'To', 'Transaction ID', 'Wallet Source', 'Description' ];
-      tobexported = await _db_all(db, `SELECT datetime(time, 'unixepoch') as 'Time (UTC)', IIF(amount < 0, 'out', 'in') as Type, amount as 'Amount Transacted', currency, IIF(amount < 0, fees, '') AS 'Fee Amount', IIF(amount < 0, currency, '') AS 'Fee Currency', vins AS 'From', vouts AS 'To', txid AS 'ID', walletsource AS 'Wallet Source', description AS Description FROM transactions INNER JOIN wallet ON wallet.address = transactions.address`);
+      nonConsolSqlQuery = `SELECT datetime(time, 'unixepoch') as 'Time (UTC)', IIF(amount < 0, 'out', 'in') as Type, amount as 'Amount Transacted', currency, IIF(amount < 0, fees, '') AS 'Fee Amount', IIF(amount < 0, currency, '') AS 'Fee Currency', vins AS 'From', vouts AS 'To', txid AS 'ID', walletsource AS 'Wallet Source', description AS Description FROM transactions INNER JOIN wallet ON wallet.address = transactions.address`;
+      allTransactionsStr = await _formatTransactionsForExport(nodePayFromAddrs, db, nonConsolSqlQuery, consoldateSqlQuery, settings.consolidateNodeTxns);
       break;
   }
-  const jsonTransactions = JSON.parse(JSON.stringify(tobexported));
 
+  const jsonTransactions = JSON.parse(allTransactionsStr.replace(/\]\,\[/gm, ","));
 	const json2csvParser = new Json2csvParser({ csvFields });
 	const csv = json2csvParser.parse(jsonTransactions);
 
@@ -489,7 +627,7 @@ async function _db_all(db, query){
   return new Promise(function(resolve,reject){
     db.all(query, function(err,rows){
 			if (err) {
-				dbErrorBox(err, 'reading existing addresses from')
+				dbErrorBox(err)
 			}
 			resolve(rows);
     });
@@ -756,4 +894,28 @@ function getFilteredVin(address, originalVin) {
             return address.has(vin.addr);
         }));
     });
+}
+
+const _formatTransactionsForExport = async (nodePayFromAddrs, db, sqlNonConsolQuery, sqlConsolQuery, consolidateFlag) => {
+  let allTransactionsStr;
+  if (consolidateFlag == false || !sqlConsolQuery) {
+    sqlNonConsolQuery = sqlNonConsolQuery.split('WHERE')[0];
+    nonConsolidatedObj = await _db_all(db, sqlNonConsolQuery);
+    allTransactionsStr = JSON.stringify(nonConsolidatedObj);
+
+    return allTransactionsStr;
+  } else if (consolidateFlag == true){
+    nonConsolidatedObj = await _db_all(db, sqlNonConsolQuery);
+    allTransactionsStr = JSON.stringify(nonConsolidatedObj);
+
+    for (const nodeAddr of Object.keys(nodePayFromAddrs)) {
+      nodeTxns = await _db_all(db, `SELECT txid, COUNT(*) FROM transactions WHERE vins = '${nodePayFromAddrs[nodeAddr]}' GROUP BY txid HAVING COUNT(*) > 0`)
+      for (var nodeTxid of Object.keys(nodeTxns)) {
+        let consolidatedTxnsObj = await _db_all(db, sqlConsolQuery + ` WHERE txid = "${nodeTxns[nodeTxid].txid}";`);
+        allTransactionsStr = allTransactionsStr + "," + JSON.stringify(consolidatedTxnsObj)
+      }
+    }
+
+    return allTransactionsStr;
+  }
 }

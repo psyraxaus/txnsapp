@@ -113,7 +113,7 @@ addAddressesButton.addEventListener('click', () => {
 settingsButton.addEventListener('click', () => {
   let win = new BrowserWindow( {
     width: 645,
-    height: 225,
+    height: 255,
     show: true,
     parent: currentWindow,
     frame: false,
@@ -164,6 +164,7 @@ ipcRenderer.on('task-running', (event, message) => {
 
 ipcRenderer.on('settings', (event, message) => {
   settings = message;
+  console.log(message)
   mainProcess.saveSettings(currentWindow);
   currentTaskwindowText.innerHTML = `Current API URL: ${settings.apiUrl}`;
 });
