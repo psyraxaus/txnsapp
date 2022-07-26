@@ -6,7 +6,7 @@ A lightweight application to search for transactions associated with public addr
 
 Download one of the releases for your operating system click on the "Add new Address/es" button to add new addresses.
 
-The addresses can be entered either individually, using an xpub (available from the advanced section when you edit your Ledger Live account), or from a csv file with the format (addr,description,name).  
+The addresses can be entered either individually, using an xpub (available from the advanced section when you edit your Ledger Live account), or from a csv file with the format (addr,description,source).  
 
 Please note that the xpub and all addresses are stored locally on you computer and only the publicly visible addresses are sent across the internet to get the transaction data.
 
