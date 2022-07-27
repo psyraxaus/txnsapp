@@ -567,6 +567,18 @@ const removeSingleAddress = exports.removeSingleAddress = async (targetWindow, a
   databaseClose(db);
 }
 
+const updateAddressDetails = exports.updateAddressDetails = async (targetWindow, address, newWalletSource, newDescription) => {
+  let db = new sqlite3.Database(dbPath, (err) => {
+    if (err) {
+      dbErrorBox(err, 'connecting to');
+    }
+  });
+  db.run(`UPDATE wallet SET description = '${newDescription}', walletsource = '${newWalletSource}' WHERE address = '${address}'`);
+  let updatedAddressObj = await _db_all(db, `SELECT address, walletsource, description FROM wallet WHERE address = '${address}'`)
+  targetWindow.webContents.send('address-updated', updatedAddressObj);
+  targetWindow.webContents.send('task-running', `Address details updated.`);
+}
+
 var documentPath = app.getPath('appData');
 try {
 	fs.accessSync(path.join(documentPath, 'HorizenTxHistoryApp'));

@@ -149,6 +149,28 @@ footer {
   padding: 0.5em 1em;
 }
 
+.cancelButton {
+  font-size: 14px;
+  background-color: #FA8072;
+  border: none;
+  padding: 0.5em 1em;
+}
+
+.cancelButton:hover {
+  background-color: #f251ea;
+}
+
+.saveButton {
+  font-size: 14px;
+  background-color: #0e9de5;
+  border: none;
+  padding: 0.5em 1em;
+}
+
+.saveButton:hover {
+  background-color: #5914b2;
+}
+
 .tabContent {
     display: flex;
     flex-direction: column;
@@ -244,6 +266,18 @@ footer {
 .addrItem {
   flex-shrink: 0;
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 5px 0 5px 0;
+  cursor: pointer;
+}
+
+.addrItem > :not(:first-child) {
+  margin-left: 5px;
+}
+
+.addrItem > :last-child {
+  margin-right: 5px;
 }
 
 .addrInfo:hover {

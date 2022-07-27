@@ -40,7 +40,9 @@
                   <img class=addrDetailButton src="../assets/About_icon_(The_Noun_Project).svg" />
                   <span class=addrText></span>
               </div>
-              <span class="addrName"></span>
+              <span class="addrName">Source: <span class="addrNameText"></span></span>
+              <br>
+              <span class="addrDescription">Description: <span class=addrDescriptionText></span></span>
           </div>
       </div>
     </template>
@@ -57,6 +59,7 @@
     </div>
     <footer class="footer">
       <div class="center">
+        <button id="edit-address-button" disabled>Edit Address</button>
         <button id="remove-address-button" disabled>Remove Address</button>
         <button id="fetch-single-txns-button" disabled>Fetch Single Address Transactions</button>
         <button id="export-single-addr-txns-button" disabled>Export Single Address Transactions</button>

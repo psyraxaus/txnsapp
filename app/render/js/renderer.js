@@ -17,6 +17,7 @@ const removeAllTransactionsButton = document.querySelector('#remove-all-txns');
 const exportAllTransactionsButton = document.querySelector('#export-alll-txns');
 const settingsButton = document.querySelector('#settings-button');
 const removeAddresButton = document.querySelector('#remove-address-button');
+const editAddresButton = document.querySelector('#edit-address-button');
 
 let filePath = null;
 let settings;
@@ -77,6 +78,53 @@ removeAddresButton.addEventListener('click', () => {
   event.preventDefault();
   mainProcess.removeSingleAddress(currentWindow, selectedAddress)
 })
+
+editAddresButton.addEventListener('click', () => {
+  event.preventDefault();
+  editAddresButton.disabled = true;
+  let originalSourceText;
+  let originalDescriptionText;
+  let sourceBox = document.createElement("input");
+  let descriptionBox = document.createElement("input");
+  let saveButton = document.createElement("button");
+  saveButton.innerHTML = "Save";
+  saveButton.className = "saveButton";
+  let cancelButton = document.createElement("button");
+  cancelButton.innerHTML = "Cancel";
+  cancelButton.className = "cancelButton";
+  const addrItemToEdit = document.getElementById(`${selectedAddress}`)
+  let buttonCheck = addrItemToEdit.getElementsByClassName('saveButton');
+  if (!addrItemToEdit.querySelector('.saveButton')) {
+    addrItemToEdit.appendChild(saveButton);
+    addrItemToEdit.appendChild(cancelButton);
+    originalSourceText = addrItemToEdit.querySelector('.addrNameText');
+    originalDescriptionText = addrItemToEdit.querySelector('.addrDescriptionText');
+    addrItemToEdit.querySelector('.addrNameText').replaceWith(sourceBox);
+    addrItemToEdit.querySelector('.addrDescriptionText').replaceWith(descriptionBox);
+  };
+
+  cancelButton.addEventListener('click', () => {
+    addrItemToEdit.removeChild(saveButton);
+    addrItemToEdit.removeChild(cancelButton);
+    addrItemToEdit.querySelector('.addrName').removeChild(sourceBox);
+    addrItemToEdit.querySelector('.addrDescription').removeChild(descriptionBox);
+    addrItemToEdit.querySelector('.addrName').appendChild(originalSourceText);
+    addrItemToEdit.querySelector('.addrDescription').appendChild(originalDescriptionText);
+  });
+  saveButton.addEventListener('click', () => {
+    mainProcess.updateAddressDetails(currentWindow, selectedAddress, sourceBox.value, descriptionBox.value);
+    addrItemToEdit.querySelector('.addrName').removeChild(sourceBox);
+    addrItemToEdit.querySelector('.addrDescription').removeChild(descriptionBox);
+    addrItemToEdit.removeChild(saveButton);
+    addrItemToEdit.removeChild(cancelButton);
+    ipcRenderer.on('address-updated', (event, message) => {
+      addrItemToEdit.querySelector('.addrName').appendChild(originalSourceText);
+      addrItemToEdit.querySelector('.addrNameText').innerHTML = message[0].walletsource;
+      addrItemToEdit.querySelector('.addrDescription').appendChild(originalDescriptionText);
+      addrItemToEdit.querySelector('.addrDescriptionText').innerHTML = message[0].description;
+    })
+  });
+});
 
 addAddressesButton.addEventListener('click', () => {
   let win = new BrowserWindow( {
@@ -164,7 +212,6 @@ ipcRenderer.on('task-running', (event, message) => {
 
 ipcRenderer.on('settings', (event, message) => {
   settings = message;
-  console.log(message)
   mainProcess.saveSettings(currentWindow);
   currentTaskwindowText.innerHTML = `Current API URL: ${settings.apiUrl}`;
 });
@@ -197,7 +244,8 @@ const formatAddrItem = (addrObj) => {
     addrItem.dataset.addr = addrObj.address;
     addrItem.id = addrObj.address;
 
-    setAddressNodeName(addrObj, addrItem.getElementsByClassName("addrName")[0]);
+    setAddressNodeName(addrObj, addrItem.getElementsByClassName("addrNameText")[0]);
+    addrItem.querySelector(".addrDescriptionText").textContent = `${addrObj.description}`;
     addrItem.getElementsByClassName("addrText")[0].textContent = formatAddressInList(addrObj.address);
     addrItem.addEventListener("click", () => {
       const addrAttr = addrItem.getAttribute('data-addr');
@@ -220,7 +268,6 @@ const createTxItem = (txObj, newTx = false) => {
     if (newTx) {
         node.classList.add("txItemNew");
     }
-//    node.addEventListener("click", () => showTxDetail(txObj));
     return node;
 }
 
@@ -278,7 +325,7 @@ const fixLinks = (parent = document) => {
 
 const setAddressNodeName = (addrObj, addrNode) => {
     if (addrObj.walletsource) {
-        setNodeTrText(addrNode, addrObj.address, null, `Source: ${addrObj.walletsource}`);
+        setNodeTrText(addrNode, addrObj.address, null, `${addrObj.walletsource}`);
     } else {
         setNodeTrText(addrNode, addrObj.address, "wallet.tabOverview.unnamedAddress", "Unnamed address");
     }
@@ -354,7 +401,14 @@ function setTxBalanceText(node, balance) {
     const amountNode = node.firstElementChild;
     amountNode.textContent = balanceStr;
 }
-
+/*
+function setAddrDescriptionText(node, description) {
+  let descriptionClass;
+    const descriptionNode = node.firstElementChild;
+//    console.log(descriptionNode)
+//    descriptionNode.textContent = description;
+}
+*/
 function formatBalance(balance, localeTag = undefined) {
     return parseFloat(balance).toLocaleString(localeTag, {minimumFractionDigits: 8, maximumFractionDigits: 8});
 }
@@ -364,6 +418,7 @@ const _highlightAddr = () => {
     el.addEventListener('click', function (e) {
       document.querySelectorAll('.addrItem').forEach(x => x.classList.remove('active'));
       e.currentTarget.classList.toggle('active');
+      editAddresButton.disabled = false;
     });
   });
 };
