@@ -401,14 +401,7 @@ function setTxBalanceText(node, balance) {
     const amountNode = node.firstElementChild;
     amountNode.textContent = balanceStr;
 }
-/*
-function setAddrDescriptionText(node, description) {
-  let descriptionClass;
-    const descriptionNode = node.firstElementChild;
-//    console.log(descriptionNode)
-//    descriptionNode.textContent = description;
-}
-*/
+
 function formatBalance(balance, localeTag = undefined) {
     return parseFloat(balance).toLocaleString(localeTag, {minimumFractionDigits: 8, maximumFractionDigits: 8});
 }
