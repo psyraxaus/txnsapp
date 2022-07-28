@@ -18,6 +18,7 @@ const exportAllTransactionsButton = document.querySelector('#export-alll-txns');
 const settingsButton = document.querySelector('#settings-button');
 const removeAddresButton = document.querySelector('#remove-address-button');
 const editAddresButton = document.querySelector('#edit-address-button');
+const progressBar = document.getElementById('bar');
 
 let filePath = null;
 let settings;
@@ -161,7 +162,7 @@ addAddressesButton.addEventListener('click', () => {
 settingsButton.addEventListener('click', () => {
   let win = new BrowserWindow( {
     width: 645,
-    height: 255,
+    height: 305,
     show: true,
     parent: currentWindow,
     frame: false,
@@ -206,9 +207,16 @@ ipcRenderer.on('task-running', (event, message) => {
   if (message.includes("Error")) {
     document.getElementById('currenttaskwindowtext').style.color = '#DC143C';
     currentTaskwindowText.innerHTML = message;
-  }
-  currentTaskwindowText.innerHTML = message;
+  } else {
+    document.getElementById('currenttaskwindowtext').style.color = 'black'
+    currentTaskwindowText.innerHTML = message;
+  };
 });
+
+ipcRenderer.on('progress-bar', (event, percentage) => {
+  console.log(percentage);
+  _setBar(percentage);
+})
 
 ipcRenderer.on('settings', (event, message) => {
   settings = message;
@@ -420,4 +428,8 @@ const _removeAllChildNodes = (parent) => {
     while (parent.firstChild) {
         parent.removeChild(parent.firstChild);
     }
+}
+
+const _setBar = (percentage) => {
+  progressBar.style.width = percentage + "%";
 }

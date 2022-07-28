@@ -17,14 +17,20 @@ const koinlyRad = document.getElementById('Koinly');
 const unformattedRad = document.getElementById('Unformatted');
 const closeButton = document.getElementById('closebutton');
 const saveSettingsButton = document.getElementById('savesettingsbutton');
-const consolidateNodeTxnsBox = document.getElementById('consolidate');
+const consolidateNodeTxnsBox = document.getElementById('consol-Node-Transactions');
+const consolidateInternalVinsTxnsBox = document.getElementById('consol-Internal-Transactions');
+const tagTxAsFaucetBox = document.getElementById('tag-Tx-As-Faucet');
+const tagTxAsRewardBox = document.getElementById('tag-Tx-As-Reward');
 
 ipc.on('settingsRunning', (event, message) => {
   settings = message;
   explorerUrlTextBox.value = settings.explorerUrl;
   apiUrlTextBox.value = settings.apiUrl;
   refreshTextBox.value = settings.refreshIntervalAPI;
-  consolidateNodeTxnsBox.checked = settings.consolidateNodeTxns;
+  consolidateNodeTxnsBox.checked = settings.consolidateNodeTxnsCheck;
+  consolidateInternalVinsTxnsBox.checked = settings.consolidateVinsTxnsCheck;
+  tagTxAsFaucetBox.checked = settings.tagTxAsFaucet;
+  tagTxAsRewardBox.checked = settings.tagTxAsReward;
   switch (settings.csvFormat) {
     case 'Unformatted':
       unformattedRad.checked = true;
@@ -51,13 +57,19 @@ closeButton.addEventListener('click', (event) => {
 saveSettingsButton.addEventListener('click', (event) => {
   event.preventDefault();
   let csvType = document.querySelector('input[name="csvType"]:checked').value;
-  let consolidate = document.querySelector('#consolidate');
+  let consolidateNodeTransactions = document.querySelector('#consol-Node-Transactions');
+  let consolidateInternalVinsTransactions = document.querySelector('#consol-Internal-Transactions');
+  let tagTxAsFaucet = document.querySelector('#tag-Tx-As-Faucet');
+  let tagTxAsReward = document.querySelector('#tag-Tx-As-Reward');
   let updatedSettings = {
     explorerUrl: explorerUrlTextBox.value,
     apiUrl: apiUrlTextBox.value,
     csvFormat: csvType,
     refreshIntervalAPI: parseInt(refreshTextBox.value),
-    consolidateNodeTxns: consolidate.checked
+    consolidateNodeTxnsCheck: consolidateNodeTransactions.checked,
+    consolidateVinsTxnsCheck: consolidateInternalVinsTransactions.checked,
+    tagTxAsFaucet: tagTxAsFaucet.checked,
+    tagTxAsReward: tagTxAsReward.checked
   };
   mainProcess.setSettings(currentWindow, updatedSettings);
   window.close();
