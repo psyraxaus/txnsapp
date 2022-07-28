@@ -99,38 +99,48 @@ const getFileFromUser  = exports.getFileFromUser = (targetWindow) => {
 	});
 };
 
-const saveExportedTransactions  = exports.saveExportedTransactions = (targetWindow, csvFormat) => {
-	dialog.showSaveDialog(targetWindow, {
-		properties: ['saveFile'],
-		defaultPath: app.getPath('documents'),
-		filters: [
-			{ name: 'Comma-separated Values', extensions: ['csv'] }
-		]
-	}).then(result => {
-		if (result.filePath) {
-			_saveExportedFile(targetWindow, result.filePath.toString(), csvFormat)
-		}
-	}).catch(err => {
-		targetWindow.webContents.send('task-running', `Saving exported transactions error: ${err}`);
-	});
+const saveExportedTransactions  = exports.saveExportedTransactions = async (targetWindow, csvFormat) => {
+  let db = new sqlite3.Database(dbPath, (err) => {
+    if (err) {
+      dbErrorBox(err, 'connecting to');
+    }
+  });
+  if (settings.splitCsvOutputboxCheck == false) {
+    dialog.showSaveDialog(targetWindow, {
+      properties: ['saveFile'],
+      defaultPath: app.getPath('documents'),
+      filters: [
+        { name: 'Comma-separated Values', extensions: ['csv'] }
+      ]
+    }).then(result => {
+      if (result.filePath) {
+        _saveExportedFile(db, targetWindow, result.filePath.toString(), csvFormat)
+      }
+    }).catch(err => {
+      targetWindow.webContents.send('task-running', `Saving exported transactions error: ${err}`);
+    });
+  } else {
+    let rows = await _db_all(db, `SELECT DISTINCT walletsource FROM wallet;`);
+    for (let i = 0; i < rows.length; i++){
+      let walletSourceName = rows[i].walletsource;
+      if (rows[i].walletsource == '') {
+        walletSourceName = 'Unnamed_Wallet';
+      };
+      await _saveExportedFile(db, targetWindow, `${app.getPath('documents')}/${settings.csvFormat}_${walletSourceName}.csv`, csvFormat, rows[i].walletsource);
+    }
+  }
 };
 
-const _saveExportedFile = async (targetWindow, file, csvFormat) => {
-	let db = new sqlite3.Database(dbPath, (err) => {
-		if (err) {
-			dbErrorBox(err, 'connecting to');
-		}
-	});
-
+const _saveExportedFile = async (db, targetWindow, file, csvFormat, walletSourceName) => {
   const nodePayFromAddrs = [
     "zsf45QuD75XJdm3uLftiW6pucvbhvrbhAhZ",
     "zsoVG9Evw68te8hRAP3xPXSbx9HoH26LUYN",
     "zsi4CcCUYtR1iNjEyjkLPjSVPzSPa4atxt9"
   ]
-
   let tobexported;
   let nonConsolSqlQuery;
   let consoldateSqlQuery;
+  let walletSourceQueryAdd;
   let tagFaucetTypeStr = '';
   let tagNodeRewardTypeStr = '';
   if (settings.tagTxAsFaucet == true) {
@@ -157,6 +167,7 @@ const _saveExportedFile = async (targetWindow, file, csvFormat) => {
           txid AS "ID (Optional)",
           "" AS 'Description (Optional)'
         FROM transactions
+        INNER JOIN wallet ON wallet.address = transactions.address
         WHERE
           vins <> "zsf45QuD75XJdm3uLftiW6pucvbhvrbhAhZ"
           AND vins <> "zsoVG9Evw68te8hRAP3xPXSbx9HoH26LUYN"
@@ -176,7 +187,8 @@ const _saveExportedFile = async (targetWindow, file, csvFormat) => {
           GROUP_CONCAT(address) AS 'To (Optional)',
           txid AS 'ID (Optional)',
           "" AS 'Description (Optional)'
-        FROM transactions`
+        FROM transactions
+        INNER JOIN wallet ON wallet.address = transactions.address`
 
       consolidateIntTxnsQuery = `SELECT
           datetime(time, 'unixepoch') as 'Timestamp (UTC)',
@@ -193,7 +205,7 @@ const _saveExportedFile = async (targetWindow, file, csvFormat) => {
           "" AS 'Description (Optional)'
         FROM transactions`
 
-      allTransactionsStr = await _formatTransactionsForExport(targetWindow, nodePayFromAddrs, db, nonConsolSqlQuery, consoldateSqlQuery, consolidateIntTxnsQuery);
+      allTransactionsStr = await _formatTransactionsForExport(targetWindow, nodePayFromAddrs, db, nonConsolSqlQuery, consoldateSqlQuery, consolidateIntTxnsQuery, walletSourceName);
       break;
     case "Cointracking":
       csvFields = ['Type', 'Buy Amount', 'Buy Currency', 'Sell Amount', 'Sell Currency', 'Fee', 'Fee Currency', 'Exchange', 'Trade-Group', 'Comment', 'Date', "Tx-ID", "Buy Value in Account Currrency", "Sell Value in Account Currency" ];
@@ -257,7 +269,7 @@ const _saveExportedFile = async (targetWindow, file, csvFormat) => {
           FROM transactions
           INNER JOIN wallet ON wallet.address = transactions.address`;
 
-      allTransactionsStr = await _formatTransactionsForExport(targetWindow, nodePayFromAddrs, db, nonConsolSqlQuery, consoldateSqlQuery, consolidateIntTxnsQuery);
+      allTransactionsStr = await _formatTransactionsForExport(targetWindow, nodePayFromAddrs, db, nonConsolSqlQuery, consoldateSqlQuery, consolidateIntTxnsQuery, walletSourceName);
       break;
     case "Koinly":
       csvFields = ['Date', 'Sent Amount', 'Sent Currency', 'Received Amount', 'Received Currency', 'Fee Amount', 'Fee Currency', 'Net Worth Amount', 'Net Worth Currency', 'Label', 'Description', 'TxHash' ];
@@ -314,7 +326,7 @@ const _saveExportedFile = async (targetWindow, file, csvFormat) => {
         FROM transactions
         INNER JOIN wallet ON wallet.address = transactions.address`
 
-      allTransactionsStr = await _formatTransactionsForExport(targetWindow, nodePayFromAddrs, db, nonConsolSqlQuery, consoldateNodeSqlQuery, consolidateIntTxnsQuery);
+      allTransactionsStr = await _formatTransactionsForExport(targetWindow, nodePayFromAddrs, db, nonConsolSqlQuery, consoldateNodeSqlQuery, consolidateIntTxnsQuery, walletSourceName);
       break;
     case "Accointing":
       csvFields = ['transactionType', 'date', 'inBuyAmount', 'inBuyAsset', 'outSellAmount', 'outSellAsset', 'feeAmount (optional)', 'feeAsset (optional)', 'classification (optional)', 'operationId (optional)', 'comments (optional)' ];
@@ -368,7 +380,7 @@ const _saveExportedFile = async (targetWindow, file, csvFormat) => {
         FROM transactions
         INNER JOIN wallet ON wallet.address = transactions.address`;
 
-        allTransactionsStr = await _formatTransactionsForExport(targetWindow, nodePayFromAddrs, db, nonConsolSqlQuery, consoldateSqlQuery, consolidateIntTxnsQuery);
+        allTransactionsStr = await _formatTransactionsForExport(targetWindow, nodePayFromAddrs, db, nonConsolSqlQuery, consoldateSqlQuery, consolidateIntTxnsQuery, walletSourceName);
       break;
     case "Unformatted":
       csvFields = ['Timestamp (UTC)', 'Type','Amount Transacted', 'Currency', 'Fee Amount', 'Fee Currency', 'From Address', 'To', 'Transaction ID', 'Wallet Source', 'Description' ];
@@ -419,7 +431,7 @@ const _saveExportedFile = async (targetWindow, file, csvFormat) => {
         FROM transactions
         INNER JOIN wallet ON wallet.address = transactions.address`;
 
-      allTransactionsStr = await _formatTransactionsForExport(targetWindow, nodePayFromAddrs, db, nonConsolSqlQuery, consoldateSqlQuery, consolidateIntTxnsQuery);
+      allTransactionsStr = await _formatTransactionsForExport(targetWindow, nodePayFromAddrs, db, nonConsolSqlQuery, consoldateSqlQuery, consolidateIntTxnsQuery, walletSourceName);
       break;
   }
 
@@ -779,6 +791,7 @@ async function _db_all(db, query){
     db.all(query, function(err,rows){
 			if (err) {
 				dbErrorBox(err)
+        console.log(err)
 			}
 			resolve(rows);
     });
@@ -1047,7 +1060,10 @@ function getFilteredVin(address, originalVin) {
     });
 }
 
-const _formatTransactionsForExport = async (targetWindow, nodePayFromAddrs, db, sqlNonConsolQuery, sqlConsolQuery, consolidateIntTxnsQuery) => {
+const _formatTransactionsForExport = async (targetWindow, nodePayFromAddrs, db, sqlNonConsolQuery, sqlConsolQuery, consolidateIntTxnsQuery, walletSourceName) => {
+  if (settings.splitCsvOutputboxCheck == true) {
+    walletSourceQueryAdd = ` walletsource = '${walletSourceName}'`
+  };
   let progressCountInt = 0;
   targetWindow.webContents.send('progress-bar', progressCountInt);
   targetWindow.webContents.send('task-running', `Formatting transactions for export. Progress can be seen in Magenta bar above.`);
@@ -1063,6 +1079,9 @@ const _formatTransactionsForExport = async (targetWindow, nodePayFromAddrs, db, 
   let allTransactionsStr;
   if (settings.consolidateNodeTxnsCheck == false && settings.consolidateVinsTxnsCheck == false) {
     sqlNonConsolQuery = sqlNonConsolQuery.split('WHERE')[0];
+    if (settings.splitCsvOutputboxCheck == true) {
+      sqlNonConsolQuery = sqlNonConsolQuery + ' WHERE ' + walletSourceQueryAdd;
+    }
     nonConsolidatedObj = await _db_all(db, sqlNonConsolQuery);
     allTransactionsStr = JSON.stringify(nonConsolidatedObj);
     progressCountInt += 100;
@@ -1070,13 +1089,33 @@ const _formatTransactionsForExport = async (targetWindow, nodePayFromAddrs, db, 
     return allTransactionsStr;
   } else if (settings.consolidateNodeTxnsCheck == true && settings.consolidateVinsTxnsCheck == false){
     sqlNonConsolQuery = sqlNonConsolQuery.split('AND vins == transactions.address')[0];
+    if (settings.splitCsvOutputboxCheck == true) {
+      sqlNonConsolQuery = sqlNonConsolQuery + ' AND ' + walletSourceQueryAdd;
+    }
     nonConsolidatedObj = await _db_all(db, sqlNonConsolQuery);
     allTransactionsStr = JSON.stringify(nonConsolidatedObj);
     for (const nodeAddr of Object.keys(nodePayFromAddrs)) {
       targetWindow.webContents.send('task-running', `Formatting node reward payment transactions for export. Progress can be seen in Magenta bar above.`);
-      nodeTxns = await _db_all(db, `SELECT txid, COUNT(*) FROM transactions WHERE vins = '${nodePayFromAddrs[nodeAddr]}' GROUP BY txid HAVING COUNT(*) > 0`)
+      if (settings.splitCsvOutputboxCheck == true) {
+        nodeTxns = await _db_all(db, `SELECT txid,
+            COUNT(*)
+          FROM transactions
+          INNER JOIN wallet ON wallet.address = transactions.address
+          WHERE vins = '${nodePayFromAddrs[nodeAddr]}'
+            AND walletsource = '${walletSourceName}'
+          GROUP BY txid HAVING COUNT(*) > 0`);
+        sqlNonConsolQuery = sqlNonConsolQuery + ' AND ' + walletSourceQueryAdd;
+      } else {
+        nodeTxns = await _db_all(db, `SELECT txid, COUNT(*) FROM transactions WHERE vins = '${nodePayFromAddrs[nodeAddr]} ' GROUP BY txid HAVING COUNT(*) > 0`);
+      }
+
       for (let nodeTxid of Object.keys(nodeTxns)) {
-        let consolidatedNodeTxnsObj = await _db_all(db, sqlConsolQuery + ` WHERE txid = "${nodeTxns[nodeTxid].txid}";`);
+        if (settings.splitCsvOutputboxCheck == true) {
+          let consolidatedNodeTxnsObj = await _db_all(db, sqlConsolQuery + ` WHERE txid = "${nodeTxns[nodeTxid].txid}" AND walletsource = '${walletSourceName}';`);
+        } else {
+          let consolidatedNodeTxnsObj = await _db_all(db, sqlConsolQuery + ` WHERE txid = "${nodeTxns[nodeTxid].txid}";`);
+        }
+
         allTransactionsStr = allTransactionsStr + JSON.stringify(consolidatedNodeTxnsObj)
         let percentageComplete =  (nodeTxid / nodeTxns.length).toFixed(3) * 100;
         progressCountInt = percentageComplete;
@@ -1087,13 +1126,20 @@ const _formatTransactionsForExport = async (targetWindow, nodePayFromAddrs, db, 
 
   } else if (settings.consolidateNodeTxnsCheck == true && settings.consolidateVinsTxnsCheck == true) {
     let consolidatedIntTxnsStr = '';
+    if (settings.splitCsvOutputboxCheck == true) {
+      sqlNonConsolQuery = sqlNonConsolQuery + ' AND ' + walletSourceQueryAdd;
+    }
     nonConsolidatedObj = await _db_all(db, sqlNonConsolQuery);
     allTransactionsStr = JSON.stringify(nonConsolidatedObj);
     targetWindow.webContents.send('progress-bar', progressCountInt);
     let txCountIdx = 0;
     for (let intTxid of Object.keys(internalTxns)) {
       targetWindow.webContents.send('task-running', `Formatting internal transactions for export. Progress can be seen in Magenta bar above.`);
-      let consolidatedIntTxnsObj = await _db_all(db, consolidateIntTxnsQuery + ` WHERE txid = '${internalTxns[intTxid].txid}' AND transactions.address <> vouts;`);
+      if (settings.splitCsvOutputboxCheck == true) {
+        consolidatedIntTxnsObj = await _db_all(db, consolidateIntTxnsQuery + ` WHERE txid = '${internalTxns[intTxid].txid}' AND transactions.address <> vouts AND walletsource = '${walletSourceName}';`);
+      } else {
+        consolidatedIntTxnsObj = await _db_all(db, consolidateIntTxnsQuery + ` WHERE txid = '${internalTxns[intTxid].txid}' AND transactions.address <> vouts;`);
+      }
       targetWindow.webContents.send('progress-bar', progressCountInt);
       allTransactionsStr = allTransactionsStr + JSON.stringify(consolidatedIntTxnsObj);
       txCountIdx += 1;
@@ -1103,9 +1149,24 @@ const _formatTransactionsForExport = async (targetWindow, nodePayFromAddrs, db, 
     };
     for (const nodeAddr of Object.keys(nodePayFromAddrs)) {
       targetWindow.webContents.send('task-running', `Formatting node reward payment transactions for export. Progress can be seen in Magenta bar above.`);
-      nodeTxns = await _db_all(db, `SELECT txid, COUNT(*) FROM transactions WHERE vins = '${nodePayFromAddrs[nodeAddr]}' GROUP BY txid HAVING COUNT(*) > 0`)
+      if (settings.splitCsvOutputboxCheck == true) {
+        nodeTxns = await _db_all(db, `SELECT txid,
+            COUNT(*)
+          FROM transactions
+          INNER JOIN wallet ON wallet.address = transactions.address
+          WHERE vins = '${nodePayFromAddrs[nodeAddr]}'
+            AND walletsource = '${walletSourceName}'
+          GROUP BY txid HAVING COUNT(*) > 0`);
+        sqlNonConsolQuery = sqlNonConsolQuery + 'WHERE' + walletSourceQueryAdd;
+      } else {
+        nodeTxns = await _db_all(db, `SELECT txid, COUNT(*) FROM transactions WHERE vins = '${nodePayFromAddrs[nodeAddr]} ' GROUP BY txid HAVING COUNT(*) > 0`);
+      }
       for (let nodeTxid of Object.keys(nodeTxns)) {
-        let consolidatedNodeTxnsObj = await _db_all(db, sqlConsolQuery + ` WHERE txid = "${nodeTxns[nodeTxid].txid}";`);
+        if (settings.splitCsvOutputboxCheck == true) {
+          consolidatedNodeTxnsObj = await _db_all(db, sqlConsolQuery + ` WHERE txid = "${nodeTxns[nodeTxid].txid}" AND walletsource = '${walletSourceName}';`);
+        } else {
+          consolidatedNodeTxnsObj = await _db_all(db, sqlConsolQuery + ` WHERE txid = "${nodeTxns[nodeTxid].txid}";`);
+        }
         allTransactionsStr = allTransactionsStr + JSON.stringify(consolidatedNodeTxnsObj)
         let percentageComplete =  (nodeTxid / nodeTxns.length).toFixed(3) * 100;
         progressCountInt = percentageComplete;
@@ -1122,7 +1183,11 @@ const _formatTransactionsForExport = async (targetWindow, nodePayFromAddrs, db, 
     let txCountIdx = 0;
     for (let intTxid of Object.keys(internalTxns)) {
       targetWindow.webContents.send('task-running', `Formatting internal transactions for export. Progress can be seen in Magenta bar above.`);
-      let consolidatedIntTxnsObj = await _db_all(db, consolidateIntTxnsQuery + ` WHERE txid = '${internalTxns[intTxid].txid}' AND transactions.address <> vouts;`);
+      if (settings.splitCsvOutputboxCheck == true) {
+        let consolidatedIntTxnsObj = await _db_all(db, consolidateIntTxnsQuery + ` WHERE txid = '${internalTxns[intTxid].txid}' AND transactions.address <> vouts AND walletsource = '${walletSourceName}';`);
+      } else {
+        let consolidatedIntTxnsObj = await _db_all(db, consolidateIntTxnsQuery + ` WHERE txid = '${internalTxns[intTxid].txid}' AND transactions.address <> vouts;`);
+      }
       targetWindow.webContents.send('progress-bar', progressCountInt);
       allTransactionsStr = allTransactionsStr + JSON.stringify(consolidatedIntTxnsObj);
       txCountIdx += 1;

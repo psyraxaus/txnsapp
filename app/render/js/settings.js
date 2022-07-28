@@ -17,6 +17,7 @@ const koinlyRad = document.getElementById('Koinly');
 const unformattedRad = document.getElementById('Unformatted');
 const closeButton = document.getElementById('closebutton');
 const saveSettingsButton = document.getElementById('savesettingsbutton');
+const splitCsvOutputbox = document.getElementById('split-output-by-wallet');
 const consolidateNodeTxnsBox = document.getElementById('consol-Node-Transactions');
 const consolidateInternalVinsTxnsBox = document.getElementById('consol-Internal-Transactions');
 const tagTxAsFaucetBox = document.getElementById('tag-Tx-As-Faucet');
@@ -27,6 +28,7 @@ ipc.on('settingsRunning', (event, message) => {
   explorerUrlTextBox.value = settings.explorerUrl;
   apiUrlTextBox.value = settings.apiUrl;
   refreshTextBox.value = settings.refreshIntervalAPI;
+  splitCsvOutputbox.checked = settings.splitCsvOutputboxCheck;
   consolidateNodeTxnsBox.checked = settings.consolidateNodeTxnsCheck;
   consolidateInternalVinsTxnsBox.checked = settings.consolidateVinsTxnsCheck;
   tagTxAsFaucetBox.checked = settings.tagTxAsFaucet;
@@ -57,6 +59,7 @@ closeButton.addEventListener('click', (event) => {
 saveSettingsButton.addEventListener('click', (event) => {
   event.preventDefault();
   let csvType = document.querySelector('input[name="csvType"]:checked').value;
+  let splitCsvOutput = document.querySelector('#split-output-by-wallet');
   let consolidateNodeTransactions = document.querySelector('#consol-Node-Transactions');
   let consolidateInternalVinsTransactions = document.querySelector('#consol-Internal-Transactions');
   let tagTxAsFaucet = document.querySelector('#tag-Tx-As-Faucet');
@@ -66,6 +69,7 @@ saveSettingsButton.addEventListener('click', (event) => {
     apiUrl: apiUrlTextBox.value,
     csvFormat: csvType,
     refreshIntervalAPI: parseInt(refreshTextBox.value),
+    splitCsvOutputboxCheck: splitCsvOutput.checked,
     consolidateNodeTxnsCheck: consolidateNodeTransactions.checked,
     consolidateVinsTxnsCheck: consolidateInternalVinsTransactions.checked,
     tagTxAsFaucet: tagTxAsFaucet.checked,

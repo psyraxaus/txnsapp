@@ -162,7 +162,7 @@ addAddressesButton.addEventListener('click', () => {
 settingsButton.addEventListener('click', () => {
   let win = new BrowserWindow( {
     width: 645,
-    height: 305,
+    height: 325,
     show: true,
     parent: currentWindow,
     frame: false,
@@ -214,7 +214,6 @@ ipcRenderer.on('task-running', (event, message) => {
 });
 
 ipcRenderer.on('progress-bar', (event, percentage) => {
-  console.log(percentage);
   _setBar(percentage);
 })
 
