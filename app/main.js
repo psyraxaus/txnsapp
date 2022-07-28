@@ -160,7 +160,8 @@ const _saveExportedFile = async (targetWindow, file, csvFormat) => {
         WHERE
           vins <> "zsf45QuD75XJdm3uLftiW6pucvbhvrbhAhZ"
           AND vins <> "zsoVG9Evw68te8hRAP3xPXSbx9HoH26LUYN"
-          AND vins <> "zsi4CcCUYtR1iNjEyjkLPjSVPzSPa4atxt9"`;
+          AND vins <> "zsi4CcCUYtR1iNjEyjkLPjSVPzSPa4atxt9"
+          AND vins == transactions.address`;
 
       consoldateSqlQuery = `SELECT
           datetime(time, 'unixepoch') as 'Timestamp (UTC)',
@@ -176,7 +177,23 @@ const _saveExportedFile = async (targetWindow, file, csvFormat) => {
           txid AS 'ID (Optional)',
           "" AS 'Description (Optional)'
         FROM transactions`
-      allTransactionsStr = await _formatTransactionsForExport(nodePayFromAddrs, db, nonConsolSqlQuery, consoldateSqlQuery)
+
+      consolidateIntTxnsQuery = `SELECT
+          datetime(time, 'unixepoch') as 'Timestamp (UTC)',
+          'transfer-out' AS Type,
+          currency AS 'Base Currency',
+          SUM(amount) AS 'Base Amount',
+          "" AS 'Quote Currency',
+          "" AS 'Quote Amount',
+          currency AS 'Fee Currency',
+          fees AS 'Fee Amount',
+          vins AS 'From (Optional)',
+          GROUP_CONCAT(vouts) AS 'To (Optional)',
+          txid AS 'ID (Optional)',
+          "" AS 'Description (Optional)'
+        FROM transactions`
+
+      allTransactionsStr = await _formatTransactionsForExport(targetWindow, nodePayFromAddrs, db, nonConsolSqlQuery, consoldateSqlQuery, consolidateIntTxnsQuery);
       break;
     case "Cointracking":
       csvFields = ['Type', 'Buy Amount', 'Buy Currency', 'Sell Amount', 'Sell Currency', 'Fee', 'Fee Currency', 'Exchange', 'Trade-Group', 'Comment', 'Date', "Tx-ID", "Buy Value in Account Currrency", "Sell Value in Account Currency" ];
@@ -201,7 +218,8 @@ const _saveExportedFile = async (targetWindow, file, csvFormat) => {
       WHERE
         vins <> "zsf45QuD75XJdm3uLftiW6pucvbhvrbhAhZ"
         AND vins <> "zsoVG9Evw68te8hRAP3xPXSbx9HoH26LUYN"
-        AND vins <> "zsi4CcCUYtR1iNjEyjkLPjSVPzSPa4atxt9"`;
+        AND vins <> "zsi4CcCUYtR1iNjEyjkLPjSVPzSPa4atxt9"
+        AND vins == transactions.address`;
 
       consoldateSqlQuery = `SELECT
           'Deposit' AS Type,
@@ -220,7 +238,26 @@ const _saveExportedFile = async (targetWindow, file, csvFormat) => {
           "" AS "Sell Value in Account Currency"
         FROM transactions
         INNER JOIN wallet ON wallet.address = transactions.address`;
-      allTransactionsStr = await _formatTransactionsForExport(nodePayFromAddrs, db, nonConsolSqlQuery, consoldateSqlQuery);
+
+      consolidateIntTxnsQuery = `SELECT
+            'Withdrawal' AS Type,
+            '' AS 'Buy Amount',
+            '' AS 'Buy Currency',
+            SUM(amount) AS 'Sell Amount',
+            currency AS 'Sell Currency',
+            fees AS 'Fee',
+            currency AS 'Fee Currency',
+            walletsource AS 'Exchange',
+            "" AS 'Trade-Group',
+            description AS Comment,
+            strftime('%Y-%m-%d %H:%M:%S', datetime(time, 'unixepoch')) as 'Date',
+            txid AS "Tx-ID",
+            "" AS "Buy Value in Account Currrency",
+            "" AS "Sell Value in Account Currency"
+          FROM transactions
+          INNER JOIN wallet ON wallet.address = transactions.address`;
+
+      allTransactionsStr = await _formatTransactionsForExport(targetWindow, nodePayFromAddrs, db, nonConsolSqlQuery, consoldateSqlQuery, consolidateIntTxnsQuery);
       break;
     case "Koinly":
       csvFields = ['Date', 'Sent Amount', 'Sent Currency', 'Received Amount', 'Received Currency', 'Fee Amount', 'Fee Currency', 'Net Worth Amount', 'Net Worth Currency', 'Label', 'Description', 'TxHash' ];
@@ -276,6 +313,7 @@ const _saveExportedFile = async (targetWindow, file, csvFormat) => {
           txid AS "TxHash"
         FROM transactions
         INNER JOIN wallet ON wallet.address = transactions.address`
+
       allTransactionsStr = await _formatTransactionsForExport(targetWindow, nodePayFromAddrs, db, nonConsolSqlQuery, consoldateNodeSqlQuery, consolidateIntTxnsQuery);
       break;
     case "Accointing":
@@ -297,7 +335,8 @@ const _saveExportedFile = async (targetWindow, file, csvFormat) => {
         WHERE
           vins <> "zsf45QuD75XJdm3uLftiW6pucvbhvrbhAhZ"
           AND vins <> "zsoVG9Evw68te8hRAP3xPXSbx9HoH26LUYN"
-          AND vins <> "zsi4CcCUYtR1iNjEyjkLPjSVPzSPa4atxt9"`;
+          AND vins <> "zsi4CcCUYtR1iNjEyjkLPjSVPzSPa4atxt9"
+          AND vins == transactions.address`;
 
       consoldateSqlQuery = `SELECT
           'deposit' as transactionType,
@@ -313,12 +352,74 @@ const _saveExportedFile = async (targetWindow, file, csvFormat) => {
           walletsource AS 'comments (optional)'
         FROM transactions
         INNER JOIN wallet ON wallet.address = transactions.address`;
-        allTransactionsStr = await _formatTransactionsForExport(nodePayFromAddrs, db, nonConsolSqlQuery, consoldateSqlQuery);
+
+      consolidateIntTxnsQuery = `SELECT
+          'withdraw' as transactionType,
+          strftime('%Y/%m/%d %H:%M:%S', datetime(time, 'unixepoch')) as 'date',
+          '' as 'inBuyAmount',
+          '' AS 'inBuyAsset',
+          SUM(amount) as 'outSellAmount',
+          currency AS 'outSellAsset',
+          fees AS 'feeAmount (optional)',
+          currency AS 'feeAsset (optional)',
+          "" AS 'classification (optional)',
+          txid AS 'operationId (optional)',
+          walletsource AS 'comments (optional)'
+        FROM transactions
+        INNER JOIN wallet ON wallet.address = transactions.address`;
+
+        allTransactionsStr = await _formatTransactionsForExport(targetWindow, nodePayFromAddrs, db, nonConsolSqlQuery, consoldateSqlQuery, consolidateIntTxnsQuery);
       break;
     case "Unformatted":
       csvFields = ['Timestamp (UTC)', 'Type','Amount Transacted', 'Currency', 'Fee Amount', 'Fee Currency', 'From Address', 'To', 'Transaction ID', 'Wallet Source', 'Description' ];
-      nonConsolSqlQuery = `SELECT datetime(time, 'unixepoch') as 'Time (UTC)', IIF(amount < 0, 'out', 'in') as Type, amount as 'Amount Transacted', currency, IIF(amount < 0, fees, '') AS 'Fee Amount', IIF(amount < 0, currency, '') AS 'Fee Currency', vins AS 'From', vouts AS 'To', txid AS 'ID', walletsource AS 'Wallet Source', description AS Description FROM transactions INNER JOIN wallet ON wallet.address = transactions.address`;
-      allTransactionsStr = await _formatTransactionsForExport(nodePayFromAddrs, db, nonConsolSqlQuery, consoldateSqlQuery);
+      nonConsolSqlQuery = `SELECT datetime(time, 'unixepoch') as 'Time (UTC)',
+          IIF(amount < 0, 'out', 'in') as Type,
+          amount as 'Amount Transacted',
+          currency,
+          IIF(amount < 0, fees, '') AS 'Fee Amount',
+          IIF(amount < 0, currency, '') AS 'Fee Currency',
+          vins AS 'From',
+          vouts AS 'To',
+          txid AS 'ID',
+          walletsource AS 'Wallet Source',
+          description AS Description
+        FROM transactions
+        INNER JOIN wallet ON wallet.address = transactions.address
+        WHERE
+          vins <> "zsf45QuD75XJdm3uLftiW6pucvbhvrbhAhZ"
+          AND vins <> "zsoVG9Evw68te8hRAP3xPXSbx9HoH26LUYN"
+          AND vins <> "zsi4CcCUYtR1iNjEyjkLPjSVPzSPa4atxt9"
+          AND vins == transactions.address`;
+
+      consoldateSqlQuery = `SELECT datetime(time, 'unixepoch') as 'Time (UTC)',
+          'in' as Type,
+          SUM(amount) as 'Amount Transacted',
+          currency,
+          fees AS 'Fee Amount',
+          currency AS 'Fee Currency',
+          vins AS 'From',
+          GROUP_CONCAT(transactions.address) AS 'To',
+          txid AS 'ID',
+          walletsource AS 'Wallet Source',
+          description AS Description
+        FROM transactions
+        INNER JOIN wallet ON wallet.address = transactions.address`;
+
+      consolidateIntTxnsQuery = `SELECT datetime(time, 'unixepoch') as 'Time (UTC)',
+          'out' as Type,
+          SUM(amount) as 'Amount Transacted',
+          currency,
+          fees AS 'Fee Amount',
+          currency AS 'Fee Currency',
+          vins AS 'From',
+          GROUP_CONCAT(vouts) AS 'To',
+          txid AS 'ID',
+          walletsource AS 'Wallet Source',
+          description AS Description
+        FROM transactions
+        INNER JOIN wallet ON wallet.address = transactions.address`;
+
+      allTransactionsStr = await _formatTransactionsForExport(targetWindow, nodePayFromAddrs, db, nonConsolSqlQuery, consoldateSqlQuery, consolidateIntTxnsQuery);
       break;
   }
 
@@ -950,42 +1051,77 @@ const _formatTransactionsForExport = async (targetWindow, nodePayFromAddrs, db, 
   let progressCountInt = 0;
   targetWindow.webContents.send('progress-bar', progressCountInt);
   targetWindow.webContents.send('task-running', `Formatting transactions for export. Progress can be seen in Magenta bar above.`);
+  internalTxns = await _db_all(db, `SELECT address, vins, txid,
+      COUNT(*)
+      FROM transactions
+    WHERE
+      vins <> "zsf45QuD75XJdm3uLftiW6pucvbhvrbhAhZ"
+      AND vins <> "zsoVG9Evw68te8hRAP3xPXSbx9HoH26LUYN"
+      AND vins <> "zsi4CcCUYtR1iNjEyjkLPjSVPzSPa4atxt9"
+      AND vins <> address
+    GROUP BY txid HAVING COUNT(*) > 0;`);
   let allTransactionsStr;
   if (settings.consolidateNodeTxnsCheck == false && settings.consolidateVinsTxnsCheck == false) {
     sqlNonConsolQuery = sqlNonConsolQuery.split('WHERE')[0];
     nonConsolidatedObj = await _db_all(db, sqlNonConsolQuery);
     allTransactionsStr = JSON.stringify(nonConsolidatedObj);
-
+    progressCountInt += 100;
+    targetWindow.webContents.send('progress-bar', progressCountInt);
     return allTransactionsStr;
   } else if (settings.consolidateNodeTxnsCheck == true && settings.consolidateVinsTxnsCheck == false){
+    sqlNonConsolQuery = sqlNonConsolQuery.split('AND vins == transactions.address')[0];
     nonConsolidatedObj = await _db_all(db, sqlNonConsolQuery);
     allTransactionsStr = JSON.stringify(nonConsolidatedObj);
-
     for (const nodeAddr of Object.keys(nodePayFromAddrs)) {
+      targetWindow.webContents.send('task-running', `Formatting node reward payment transactions for export. Progress can be seen in Magenta bar above.`);
       nodeTxns = await _db_all(db, `SELECT txid, COUNT(*) FROM transactions WHERE vins = '${nodePayFromAddrs[nodeAddr]}' GROUP BY txid HAVING COUNT(*) > 0`)
       for (let nodeTxid of Object.keys(nodeTxns)) {
         let consolidatedNodeTxnsObj = await _db_all(db, sqlConsolQuery + ` WHERE txid = "${nodeTxns[nodeTxid].txid}";`);
         allTransactionsStr = allTransactionsStr + JSON.stringify(consolidatedNodeTxnsObj)
+        let percentageComplete =  (nodeTxid / nodeTxns.length).toFixed(3) * 100;
+        progressCountInt = percentageComplete;
+        targetWindow.webContents.send('progress-bar', progressCountInt);
       }
     }
     return allTransactionsStr;
+
   } else if (settings.consolidateNodeTxnsCheck == true && settings.consolidateVinsTxnsCheck == true) {
     let consolidatedIntTxnsStr = '';
     nonConsolidatedObj = await _db_all(db, sqlNonConsolQuery);
     allTransactionsStr = JSON.stringify(nonConsolidatedObj);
-    internalTxns = await _db_all(db, `SELECT address, vins, txid,
-        COUNT(*)
-        FROM transactions
-      WHERE
-        vins <> "zsf45QuD75XJdm3uLftiW6pucvbhvrbhAhZ"
-        AND vins <> "zsoVG9Evw68te8hRAP3xPXSbx9HoH26LUYN"
-        AND vins <> "zsi4CcCUYtR1iNjEyjkLPjSVPzSPa4atxt9"
-        AND vins <> address
-      GROUP BY txid HAVING COUNT(*) > 0`
-    );
     targetWindow.webContents.send('progress-bar', progressCountInt);
     let txCountIdx = 0;
     for (let intTxid of Object.keys(internalTxns)) {
+      targetWindow.webContents.send('task-running', `Formatting internal transactions for export. Progress can be seen in Magenta bar above.`);
+      let consolidatedIntTxnsObj = await _db_all(db, consolidateIntTxnsQuery + ` WHERE txid = '${internalTxns[intTxid].txid}' AND transactions.address <> vouts;`);
+      targetWindow.webContents.send('progress-bar', progressCountInt);
+      allTransactionsStr = allTransactionsStr + JSON.stringify(consolidatedIntTxnsObj);
+      txCountIdx += 1;
+      let percentageComplete =  (txCountIdx / internalTxns.length).toFixed(3) * 100;
+      progressCountInt = percentageComplete;
+      targetWindow.webContents.send('progress-bar', progressCountInt);
+    };
+    for (const nodeAddr of Object.keys(nodePayFromAddrs)) {
+      targetWindow.webContents.send('task-running', `Formatting node reward payment transactions for export. Progress can be seen in Magenta bar above.`);
+      nodeTxns = await _db_all(db, `SELECT txid, COUNT(*) FROM transactions WHERE vins = '${nodePayFromAddrs[nodeAddr]}' GROUP BY txid HAVING COUNT(*) > 0`)
+      for (let nodeTxid of Object.keys(nodeTxns)) {
+        let consolidatedNodeTxnsObj = await _db_all(db, sqlConsolQuery + ` WHERE txid = "${nodeTxns[nodeTxid].txid}";`);
+        allTransactionsStr = allTransactionsStr + JSON.stringify(consolidatedNodeTxnsObj)
+        let percentageComplete =  (nodeTxid / nodeTxns.length).toFixed(3) * 100;
+        progressCountInt = percentageComplete;
+        targetWindow.webContents.send('progress-bar', progressCountInt);
+      }
+    }
+
+    return allTransactionsStr;
+  } else if (settings.consolidateNodeTxnsCheck == false && settings.consolidateVinsTxnsCheck == true) {
+    let consolidatedIntTxnsStr = '';
+    nonConsolidatedObj = await _db_all(db, sqlNonConsolQuery);
+    allTransactionsStr = JSON.stringify(nonConsolidatedObj);
+    targetWindow.webContents.send('progress-bar', progressCountInt);
+    let txCountIdx = 0;
+    for (let intTxid of Object.keys(internalTxns)) {
+      targetWindow.webContents.send('task-running', `Formatting internal transactions for export. Progress can be seen in Magenta bar above.`);
       let consolidatedIntTxnsObj = await _db_all(db, consolidateIntTxnsQuery + ` WHERE txid = '${internalTxns[intTxid].txid}' AND transactions.address <> vouts;`);
       targetWindow.webContents.send('progress-bar', progressCountInt);
       allTransactionsStr = allTransactionsStr + JSON.stringify(consolidatedIntTxnsObj);
