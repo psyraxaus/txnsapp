@@ -293,33 +293,33 @@ const _saveExportedFile = async (db, targetWindow, file, csvFormat, walletSource
     case "Koinly":
       csvFields = ['Date', 'Sent Amount', 'Sent Currency', 'Received Amount', 'Received Currency', 'Fee Amount', 'Fee Currency', 'Net Worth Amount', 'Net Worth Currency', 'Label', 'Description', 'TxHash' ];
       nonConsolSqlQuery = `SELECT
-          strftime('%Y-%m-%d %H:%M UTC', datetime(time, 'unixepoch')) as 'Date',
-          amount as 'Sent Amount',
-          currency AS 'Sent Currency',
-          '' as 'Received Amount',
-          '' AS 'Received Currency',
-          fees AS 'Fee Amount',
-          currency AS 'Fee Currency',
-          '' AS 'Net Worth Amount',
-          '' AS 'Net Worth Currency',
-          '' AS 'Label',
-          walletsource AS 'Description',
-          txid AS 'TxHash'
-        FROM transactions
-        INNER JOIN wallet ON wallet.address = transactions.address
-        WHERE vins <> "zsf45QuD75XJdm3uLftiW6pucvbhvrbhAhZ"
-          AND vins <> "zsoVG9Evw68te8hRAP3xPXSbx9HoH26LUYN"
-          AND vins <> "zsi4CcCUYtR1iNjEyjkLPjSVPzSPa4atxt9"
-          AND vouts = transactions.address`;
+        strftime('%Y-%m-%d %H:%M UTC', datetime(time, 'unixepoch')) as 'Date',
+        IIF(amount < 0, ABS(amount), "") as 'Sent Amount',
+        IIF(amount < 0, currency, '') AS 'Sent Currency',
+        IIF(amount > 0, ABS(amount), "") as 'Received Amount',
+        IIF(amount > 0, currency, '') AS 'Received Currency',
+        IIF(amount < 0, fees, '') AS 'Fee Amount',
+        IIF(amount < 0, currency, '') AS 'Fee Currency',
+        '' AS 'Net Worth Amount',
+        '' AS 'Net Worth Currency',
+        '' AS 'Label',
+        walletsource AS 'Description',
+        txid AS 'TxHash'
+      FROM transactions
+      INNER JOIN wallet ON wallet.address = transactions.address
+      WHERE vins <> "zsf45QuD75XJdm3uLftiW6pucvbhvrbhAhZ"
+        AND vins <> "zsoVG9Evw68te8hRAP3xPXSbx9HoH26LUYN"
+        AND vins <> "zsi4CcCUYtR1iNjEyjkLPjSVPzSPa4atxt9"
+        AND vouts = transactions.address`;
 
       consoldateNodeSqlQuery = `SELECT
           strftime('%Y-%m-%d %H:%M UTC', datetime(time, 'unixepoch')) as 'Date',
-          '' as 'Sent Amount',
-          '' AS 'Sent Currency',
-          SUM(amount) as 'Received Amount',
-          currency AS 'Received Currency',
-          '' AS 'Fee Amount',
-          '' AS 'Fee Currency',
+          IIF(amount < 0, ABS(SUM(amount)), "") as 'Sent Amount',
+          IIF(amount < 0, currency, '') AS 'Sent Currency',
+          IIF(amount > 0, amount, "") as 'Received Amount',
+          IIF(amount > 0, currency, '') AS 'Received Currency',
+          IIF(amount < 0, fees, '') AS 'Fee Amount',
+          IIF(amount < 0, currency, '') AS 'Fee Currency',
           '' AS 'Net Worth Amount',
           '' AS 'Net Worth Currency',
           '${tagNodeRewardTypeStr}' AS 'Label',
@@ -351,7 +351,7 @@ const _saveExportedFile = async (db, targetWindow, file, csvFormat, walletSource
           vins <> "zsf45QuD75XJdm3uLftiW6pucvbhvrbhAhZ"
           AND vins <> "zsoVG9Evw68te8hRAP3xPXSbx9HoH26LUYN"
           AND vins <> "zsi4CcCUYtR1iNjEyjkLPjSVPzSPa4atxt9"
-          AND vouts <> transactions.address`
+          AND vouts <> transactions.address`;
 
       allTransactionsStr = await _formatTransactionsForExport(targetWindow, nodePayFromAddrs, db, nonConsolSqlQuery, consoldateNodeSqlQuery, consolidateIntTxnsQuery, walletSourceName);
       break;
