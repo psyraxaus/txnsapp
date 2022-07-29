@@ -13,6 +13,7 @@ const transactionView = document.querySelector('.transactions-text');
 const currentTaskwindowText = document.getElementById('currenttaskwindowtext');
 const addAddressesButton = document.querySelector('#add-addresses-button');
 const fetchAllTransactionsButton = document.querySelector('#fetch-all-txns');
+const fetchSingleAddressTransactionsButton = document.querySelector('#fetch-single-txns-button');
 const removeAllTransactionsButton = document.querySelector('#remove-all-txns');
 const exportAllTransactionsButton = document.querySelector('#export-alll-txns');
 const settingsButton = document.querySelector('#settings-button');
@@ -68,6 +69,11 @@ txListNode.addEventListener('contextmenu', (event) => {
 fetchAllTransactionsButton.addEventListener('click', () => {
   event.preventDefault();
   mainProcess.fetchAllTransactions(currentWindow);
+})
+
+fetchSingleAddressTransactionsButton.addEventListener('click', () => {
+  event.preventDefault();
+  mainProcess.fetchSingleAddressTransactions(currentWindow, selectedAddress);
 })
 
 exportAllTransactionsButton.addEventListener('click', () => {
@@ -419,6 +425,7 @@ const _highlightAddr = () => {
       document.querySelectorAll('.addrItem').forEach(x => x.classList.remove('active'));
       e.currentTarget.classList.toggle('active');
       editAddresButton.disabled = false;
+      fetchSingleAddressTransactionsButton.disabled = false;
     });
   });
 };

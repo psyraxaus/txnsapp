@@ -316,7 +316,7 @@ const _saveExportedFile = async (db, targetWindow, file, csvFormat, walletSource
           strftime('%Y-%m-%d %H:%M UTC', datetime(time, 'unixepoch')) as 'Date',
           IIF(amount < 0, ABS(SUM(amount)), "") as 'Sent Amount',
           IIF(amount < 0, currency, '') AS 'Sent Currency',
-          IIF(amount > 0, amount, "") as 'Received Amount',
+          IIF(amount > 0, ABS(amount), "") as 'Received Amount',
           IIF(amount > 0, currency, '') AS 'Received Currency',
           IIF(amount < 0, fees, '') AS 'Fee Amount',
           IIF(amount < 0, currency, '') AS 'Fee Currency',
@@ -336,7 +336,7 @@ const _saveExportedFile = async (db, targetWindow, file, csvFormat, walletSource
           strftime('%Y-%m-%d %H:%M UTC', datetime(time, 'unixepoch')) as 'Date',
           IIF(amount < 0, ABS(SUM(amount)), "") as 'Sent Amount',
           IIF(amount < 0, currency, '') AS 'Sent Currency',
-          IIF(amount > 0, amount, "") as 'Received Amount',
+          IIF(amount > 0, ABS(amount), "") as 'Received Amount',
           IIF(amount > 0, currency, '') AS 'Received Currency',
           IIF(amount < 0, fees, '') AS 'Fee Amount',
           IIF(amount < 0, currency, '') AS 'Fee Currency',
@@ -884,14 +884,14 @@ const getTransactionsByAddress = exports.getTransactionsByAddress = async (targe
 	databaseClose(db);
 }
 
-const getExistingTxList = async (targetWindow) => {
+const getExistingTxList = async (targetWindow, sqlQuery) => {
 	let txArray = [];
 	let db = new sqlite3.Database(dbPath, (err) => {
 		if (err) {
 			dbErrorBox(err, 'connecting to');
 		}
 	});
-	let existingTransactions = await _db_all(db, `SELECT address,txid FROM transactions`);
+	let existingTransactions = await _db_all(db, sqlQuery);
 	databaseClose(db);
 	return existingTransactions;
 };
@@ -903,8 +903,8 @@ const fetchAllTransactions = exports.fetchAllTransactions = async (targetWindow)
 		}
 	});
 	let addrObjs = await _db_all(db, `SELECT address FROM wallet`);
-
-	const knownTxIds = await getExistingTxList(targetWindow);
+  let knownTxidsSqlQuery = `SELECT address,txid FROM transactions`;
+	const knownTxIds = await getExistingTxList(targetWindow, knownTxidsSqlQuery);
 	try {
 		transactions = await _fetchUnknownTransactions(addrObjs, knownTxIds, targetWindow);
 	} catch (err) {
@@ -926,6 +926,39 @@ const fetchAllTransactions = exports.fetchAllTransactions = async (targetWindow)
 		return;
 	};
 	targetWindow.webContents.send('task-running', `All transactions saved`);
+  return;
+}
+
+const fetchSingleAddressTransactions = exports.fetchSingleAddressTransactions = async (targetWindow, address) => {
+  let db = new sqlite3.Database(dbPath, (err) => {
+    if (err) {
+      dbErrorBox(err, 'connecting to');
+    }
+  });
+  let addrObjs = await _db_all(db, `SELECT address FROM wallet WHERE address = '${address}'`);
+  let knownTxidsSqlQuery = `SELECT address,txid FROM transactions WHERE address = '${address}'`;
+  const knownTxIds = await getExistingTxList(targetWindow, knownTxidsSqlQuery);
+  try {
+    transactions = await _fetchUnknownTransactions(addrObjs, knownTxIds, targetWindow);
+  } catch (err) {
+    const result = dialog.showMessageBox(mainWindow, {
+      type: 'warning',
+      title: 'Error connecting to API',
+      message: `An error occurred when connecting the API endpoint. \n ${err.message}`,
+      buttons: [
+        'OK',
+      ],
+      defaultId: 0
+    });
+    let errType;
+    if (err.message.toString().includes("429")) {
+      errType = "Rate Limited"
+
+    }
+    targetWindow.webContents.send('task-running', `Update from API failed: ${err} \n - ${errType}`);
+    return;
+  };
+  targetWindow.webContents.send('task-running', `All transactions saved`);
   return;
 }
 
