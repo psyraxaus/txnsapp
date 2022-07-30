@@ -302,7 +302,7 @@ const _saveExportedFile = async (db, targetWindow, file, csvFormat, walletSource
         IIF(amount < 0, currency, '') AS 'Fee Currency',
         '' AS 'Net Worth Amount',
         '' AS 'Net Worth Currency',
-        '' AS 'Label',
+        IIF(vins = 'znmJjX4QyLeZJFawTCP35T7tqfdhNQMNZEJ', '${tagFaucetTypeStr}', '') AS 'Label',
         walletsource AS 'Description',
         txid AS 'TxHash'
       FROM transactions
@@ -316,7 +316,7 @@ const _saveExportedFile = async (db, targetWindow, file, csvFormat, walletSource
           strftime('%Y-%m-%d %H:%M UTC', datetime(time, 'unixepoch')) as 'Date',
           IIF(amount < 0, ABS(SUM(amount)), "") as 'Sent Amount',
           IIF(amount < 0, currency, '') AS 'Sent Currency',
-          IIF(amount > 0, ABS(amount), "") as 'Received Amount',
+          IIF(amount > 0, ABS(SUM(amount)), "") as 'Received Amount',
           IIF(amount > 0, currency, '') AS 'Received Currency',
           IIF(amount < 0, fees, '') AS 'Fee Amount',
           IIF(amount < 0, currency, '') AS 'Fee Currency',
@@ -336,7 +336,7 @@ const _saveExportedFile = async (db, targetWindow, file, csvFormat, walletSource
           strftime('%Y-%m-%d %H:%M UTC', datetime(time, 'unixepoch')) as 'Date',
           IIF(amount < 0, ABS(SUM(amount)), "") as 'Sent Amount',
           IIF(amount < 0, currency, '') AS 'Sent Currency',
-          IIF(amount > 0, ABS(amount), "") as 'Received Amount',
+          IIF(amount > 0, ABS(SUM(amount)), "") as 'Received Amount',
           IIF(amount > 0, currency, '') AS 'Received Currency',
           IIF(amount < 0, fees, '') AS 'Fee Amount',
           IIF(amount < 0, currency, '') AS 'Fee Currency',
