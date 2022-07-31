@@ -19,6 +19,7 @@ const exportAllTransactionsButton = document.querySelector('#export-alll-txns');
 const settingsButton = document.querySelector('#settings-button');
 const removeAddresButton = document.querySelector('#remove-address-button');
 const editAddresButton = document.querySelector('#edit-address-button');
+const exportSingleAddressButton = document.querySelector('#export-single-addr-txns-button');
 const progressBar = document.getElementById('bar');
 
 let filePath = null;
@@ -74,6 +75,11 @@ fetchAllTransactionsButton.addEventListener('click', () => {
 fetchSingleAddressTransactionsButton.addEventListener('click', () => {
   event.preventDefault();
   mainProcess.fetchSingleAddressTransactions(currentWindow, selectedAddress);
+})
+
+exportSingleAddressButton.addEventListener('click', () => {
+  event.preventDefault();
+  mainProcess.exportSingleAddressTransactions(currentWindow, selectedAddress, settings.csvFormat);
 })
 
 exportAllTransactionsButton.addEventListener('click', () => {
@@ -426,6 +432,7 @@ const _highlightAddr = () => {
       e.currentTarget.classList.toggle('active');
       editAddresButton.disabled = false;
       fetchSingleAddressTransactionsButton.disabled = false;
+      exportSingleAddressButton.disabled = false;
     });
   });
 };

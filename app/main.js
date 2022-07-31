@@ -134,7 +134,29 @@ const saveExportedTransactions  = exports.saveExportedTransactions = async (targ
   }
 };
 
-const _saveExportedFile = async (db, targetWindow, file, csvFormat, walletSourceName) => {
+const exportSingleAddressTransactions = exports.exportSingleAddressTransactions = async (targetWindow, addressStr, csvFormat) => {
+  let db = new sqlite3.Database(dbPath, (err) => {
+    if (err) {
+      dbErrorBox(err, 'connecting to');
+    }
+  });
+  dialog.showSaveDialog(targetWindow, {
+    properties: ['saveFile'],
+    defaultPath: app.getPath('documents'),
+    filters: [
+      { name: 'Comma-separated Values', extensions: ['csv'] }
+    ]
+  }).then(result => {
+    if (result.filePath) {
+      _saveExportedFile(db, targetWindow, result.filePath.toString(), csvFormat, '', addressStr);
+      targetWindow.webContents.send('task-running', `Successfully saved file to ${result.filePath.toString()}`);
+    }
+  }).catch(err => {
+    targetWindow.webContents.send('task-running', `Saving exported transactions error: ${err}`);
+  });
+}
+
+const _saveExportedFile = async (db, targetWindow, file, csvFormat, walletSourceName, addressStr) => {
   const nodePayFromAddrs = [
     "zsf45QuD75XJdm3uLftiW6pucvbhvrbhAhZ",
     "zsoVG9Evw68te8hRAP3xPXSbx9HoH26LUYN",
@@ -216,7 +238,7 @@ const _saveExportedFile = async (db, targetWindow, file, csvFormat, walletSource
           AND vins <> "zsi4CcCUYtR1iNjEyjkLPjSVPzSPa4atxt9"
           AND vouts <> transactions.address`
 
-      allTransactionsStr = await _formatTransactionsForExport(targetWindow, nodePayFromAddrs, db, nonConsolSqlQuery, consoldateSqlQuery, consolidateIntTxnsQuery, walletSourceName);
+      allTransactionsStr = await _formatTransactionsForExport(targetWindow, nodePayFromAddrs, db, nonConsolSqlQuery, consoldateSqlQuery, consolidateIntTxnsQuery, walletSourceName, addressStr);
       break;
     case "Cointracking":
       csvFields = ['Type', 'Buy Amount', 'Buy Currency', 'Sell Amount', 'Sell Currency', 'Fee', 'Fee Currency', 'Exchange', 'Trade-Group', 'Comment', 'Date', "Tx-ID", "Buy Value in Account Currrency", "Sell Value in Account Currency" ];
@@ -288,7 +310,7 @@ const _saveExportedFile = async (db, targetWindow, file, csvFormat, walletSource
             AND vins <> "zsi4CcCUYtR1iNjEyjkLPjSVPzSPa4atxt9"
             AND vouts <> transactions.address`;
 
-      allTransactionsStr = await _formatTransactionsForExport(targetWindow, nodePayFromAddrs, db, nonConsolSqlQuery, consoldateSqlQuery, consolidateIntTxnsQuery, walletSourceName);
+      allTransactionsStr = await _formatTransactionsForExport(targetWindow, nodePayFromAddrs, db, nonConsolSqlQuery, consoldateSqlQuery, consolidateIntTxnsQuery, walletSourceName, addressStr);
       break;
     case "Koinly":
       csvFields = ['Date', 'Sent Amount', 'Sent Currency', 'Received Amount', 'Received Currency', 'Fee Amount', 'Fee Currency', 'Net Worth Amount', 'Net Worth Currency', 'Label', 'Description', 'TxHash' ];
@@ -353,7 +375,7 @@ const _saveExportedFile = async (db, targetWindow, file, csvFormat, walletSource
           AND vins <> "zsi4CcCUYtR1iNjEyjkLPjSVPzSPa4atxt9"
           AND vouts <> transactions.address`;
 
-      allTransactionsStr = await _formatTransactionsForExport(targetWindow, nodePayFromAddrs, db, nonConsolSqlQuery, consoldateNodeSqlQuery, consolidateIntTxnsQuery, walletSourceName);
+      allTransactionsStr = await _formatTransactionsForExport(targetWindow, nodePayFromAddrs, db, nonConsolSqlQuery, consoldateNodeSqlQuery, consolidateIntTxnsQuery, walletSourceName, addressStr);
       break;
     case "Accointing":
       csvFields = ['transactionType', 'date', 'inBuyAmount', 'inBuyAsset', 'outSellAmount', 'outSellAsset', 'feeAmount (optional)', 'feeAsset (optional)', 'classification (optional)', 'operationId (optional)', 'comments (optional)' ];
@@ -415,7 +437,7 @@ const _saveExportedFile = async (db, targetWindow, file, csvFormat, walletSource
           AND vins <> "zsi4CcCUYtR1iNjEyjkLPjSVPzSPa4atxt9"
           AND vouts <> transactions.address`;
 
-        allTransactionsStr = await _formatTransactionsForExport(targetWindow, nodePayFromAddrs, db, nonConsolSqlQuery, consoldateSqlQuery, consolidateIntTxnsQuery, walletSourceName);
+        allTransactionsStr = await _formatTransactionsForExport(targetWindow, nodePayFromAddrs, db, nonConsolSqlQuery, consoldateSqlQuery, consolidateIntTxnsQuery, walletSourceName, addressStr);
       break;
     case "Unformatted":
       csvFields = ['Timestamp (UTC)', 'Type','Amount Transacted', 'Currency', 'Fee Amount', 'Fee Currency', 'From Address', 'To', 'Transaction ID', 'Wallet Source', 'Description' ];
@@ -474,7 +496,7 @@ const _saveExportedFile = async (db, targetWindow, file, csvFormat, walletSource
           AND vins <> "zsi4CcCUYtR1iNjEyjkLPjSVPzSPa4atxt9"
           AND vouts <> transactions.address`;
 
-      allTransactionsStr = await _formatTransactionsForExport(targetWindow, nodePayFromAddrs, db, nonConsolSqlQuery, consoldateSqlQuery, consolidateIntTxnsQuery, walletSourceName);
+      allTransactionsStr = await _formatTransactionsForExport(targetWindow, nodePayFromAddrs, db, nonConsolSqlQuery, consoldateSqlQuery, consolidateIntTxnsQuery, walletSourceName, addressStr);
       break;
   }
 
@@ -1136,7 +1158,7 @@ function getFilteredVin(address, originalVin) {
     });
 }
 
-const _formatTransactionsForExport = async (targetWindow, nodePayFromAddrs, db, sqlNonConsolQuery, sqlConsolQuery, consolidateIntTxnsQuery, walletSourceName) => {
+const _formatTransactionsForExport = async (targetWindow, nodePayFromAddrs, db, sqlNonConsolQuery, sqlConsolQuery, consolidateIntTxnsQuery, walletSourceName, addressStr) => {
   let progressCountInt = 0;
   let allTransactionsStr;
   targetWindow.webContents.send('progress-bar', progressCountInt);
@@ -1144,10 +1166,12 @@ const _formatTransactionsForExport = async (targetWindow, nodePayFromAddrs, db, 
 
   if (settings.consolidateNodeTxnsCheck == false && settings.consolidateVinsTxnsCheck == false) {
     targetWindow.webContents.send('progress-bar', progressCountInt);
-    if (settings.splitCsvOutputboxCheck == true) {
+    if (settings.splitCsvOutputboxCheck == true && !addressStr) {
       nonConsolidatedObj = await _db_all(db, sqlNonConsolQuery.split('WHERE')[0] + ` WHERE walletsource = '${walletSourceName}';`);
-    } else {
+    } else if (settings.splitCsvOutputboxCheck == false && !addressStr) {
       nonConsolidatedObj = await _db_all(db, sqlNonConsolQuery.split('WHERE')[0]);
+    } else if (addressStr) {
+      nonConsolidatedObj = await _db_all(db, sqlNonConsolQuery.split('WHERE')[0] + ` WHERE transactions.address = '${addressStr}';`);
     }
     progressCountInt += 100;
     targetWindow.webContents.send('progress-bar', progressCountInt);
@@ -1155,10 +1179,12 @@ const _formatTransactionsForExport = async (targetWindow, nodePayFromAddrs, db, 
     return allTransactionsStr;
   } else if (settings.consolidateNodeTxnsCheck == true && settings.consolidateVinsTxnsCheck == false){
     targetWindow.webContents.send('progress-bar', progressCountInt);
-    if (settings.splitCsvOutputboxCheck == true) {
+    if (settings.splitCsvOutputboxCheck == true && !addressStr) {
       nonConsolidatedObj = await _db_all(db, sqlNonConsolQuery.split('AND vouts')[0] + ` AND walletsource = '${walletSourceName}';`);
-    } else {
+    } else if (settings.splitCsvOutputboxCheck == false && !addressStr) {
       nonConsolidatedObj = await _db_all(db, sqlNonConsolQuery.split('AND vouts')[0]);
+    } else if (addressStr) {
+      nonConsolidatedObj = await _db_all(db, sqlNonConsolQuery.split('AND vouts')[0] + ` AND transactions.address = '${addressStr}';`);
     }
     progressCountInt += 50;
     targetWindow.webContents.send('progress-bar', progressCountInt);
@@ -1167,10 +1193,12 @@ const _formatTransactionsForExport = async (targetWindow, nodePayFromAddrs, db, 
 
     targetWindow.webContents.send('progress-bar', progressCountInt);
 
-    if (settings.splitCsvOutputboxCheck == true) {
+    if (settings.splitCsvOutputboxCheck == true && !addressStr) {
       consolidatedNodeTxnsObj = await _db_all(db, sqlConsolQuery + `AND walletsource = '${walletSourceName}' GROUP BY txid HAVING COUNT(*) > 0;`);
-    } else {
+    } else if (settings.splitCsvOutputboxCheck == false && !addressStr) {
       consolidatedNodeTxnsObj = await _db_all(db, sqlConsolQuery + ` GROUP BY txid HAVING COUNT(*) > 0;`);
+    } else if (addressStr) {
+      consolidatedNodeTxnsObj = await _db_all(db, sqlConsolQuery + `AND transactions.address = '${addressStr}' GROUP BY txid HAVING COUNT(*) > 0;`);
     }
     progressCountInt += 50;
 
@@ -1182,12 +1210,15 @@ const _formatTransactionsForExport = async (targetWindow, nodePayFromAddrs, db, 
 
   } else if (settings.consolidateNodeTxnsCheck == true && settings.consolidateVinsTxnsCheck == true) {
     targetWindow.webContents.send('progress-bar', progressCountInt);
-    if (settings.splitCsvOutputboxCheck == true) {
+    if (settings.splitCsvOutputboxCheck == true && !addressStr) {
       nonConsolidatedObj = await _db_all(db, sqlNonConsolQuery + ` AND walletsource = '${walletSourceName}';`);
       consolidatedIntTxnsObj = await _db_all(db, consolidateIntTxnsQuery + ` AND walletsource = '${walletSourceName}' GROUP BY txid HAVING COUNT(*) > 0;`);
-    } else {
+    } else if (settings.splitCsvOutputboxCheck == false && !addressStr) {
       nonConsolidatedObj = await _db_all(db, sqlNonConsolQuery);
       consolidatedIntTxnsObj = await _db_all(db, consolidateIntTxnsQuery + ` GROUP BY txid HAVING COUNT(*) > 0;`);
+    } else if (addressStr) {
+      nonConsolidatedObj = await _db_all(db, sqlNonConsolQuery + ` AND transactions.address = '${addressStr}';`);
+      consolidatedIntTxnsObj = await _db_all(db, consolidateIntTxnsQuery + ` AND transactions.address = '${addressStr}' GROUP BY txid HAVING COUNT(*) > 0;`);
     }
     progressCountInt += 50;
     targetWindow.webContents.send('progress-bar', progressCountInt);
@@ -1196,10 +1227,12 @@ const _formatTransactionsForExport = async (targetWindow, nodePayFromAddrs, db, 
 
     targetWindow.webContents.send('progress-bar', progressCountInt);
 
-    if (settings.splitCsvOutputboxCheck == true) {
+    if (settings.splitCsvOutputboxCheck == true && !addressStr) {
       consolidatedNodeTxnsObj = await _db_all(db, sqlConsolQuery + `AND walletsource = '${walletSourceName}' GROUP BY txid HAVING COUNT(*) > 0;`);
-    } else {
+    } else if (settings.splitCsvOutputboxCheck == false && !addressStr) {
       consolidatedNodeTxnsObj = await _db_all(db, sqlConsolQuery + ` GROUP BY txid HAVING COUNT(*) > 0;`);
+    } else if (addressStr) {
+      consolidatedNodeTxnsObj = await _db_all(db, sqlConsolQuery + `AND transactions.address = '${addressStr}' GROUP BY txid HAVING COUNT(*) > 0;`);
     }
     progressCountInt += 50;
 
@@ -1210,12 +1243,16 @@ const _formatTransactionsForExport = async (targetWindow, nodePayFromAddrs, db, 
     return allTransactionsStr;
   } else if (settings.consolidateNodeTxnsCheck == false && settings.consolidateVinsTxnsCheck == true) {
     targetWindow.webContents.send('progress-bar', progressCountInt);
-    if (settings.splitCsvOutputboxCheck == true) {
+    if (settings.splitCsvOutputboxCheck == true && !addressStr) {
       nonConsolidatedObj = await _db_all(db, sqlNonConsolQuery + ` AND walletsource = '${walletSourceName}';`);
       consolidatedIntTxnsObj = await _db_all(db, consolidateIntTxnsQuery + ` AND walletsource = '${walletSourceName}' GROUP BY txid HAVING COUNT(*) > 0;`);
-    } else {
+    } else if (settings.splitCsvOutputboxCheck == false && !addressStr) {
       nonConsolidatedObj = await _db_all(db, sqlNonConsolQuery);
       consolidatedIntTxnsObj = await _db_all(db, consolidateIntTxnsQuery + ` GROUP BY txid HAVING COUNT(*) > 0;`);
+    } else if (addressStr) {
+      nonConsolidatedObj = await _db_all(db, sqlNonConsolQuery + ` AND transactions.address = '${addressStr}';`);
+      consolidatedIntTxnsObj = await _db_all(db, consolidateIntTxnsQuery + ` AND transactions.address = '${addressStr}' GROUP BY txid HAVING COUNT(*) > 0;`);
+
     }
     progressCountInt += 100;
     targetWindow.webContents.send('progress-bar', progressCountInt);
