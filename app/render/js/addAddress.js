@@ -4,10 +4,6 @@ const currentWindow = require('@electron/remote').getCurrentWindow();
 const remote = require("@electron/remote");
 const mainProcess = remote.require('./main.js');
 const bitcore = require('bitcore-lib-zen');
-
-
-ipc.on('message', (event, message) => console.log(message));
-
 const addAddressButton = document.getElementById('add-address-button');
 const addressTextBox = document.getElementById('addresstextbox');
 const derivationText = document.getElementById('derivationPathText');
@@ -23,7 +19,6 @@ let addAddressType = 'single';
 
 addressTextBox.addEventListener('keyup', (event) => {
   const currentContent = event.target.value;
-  console.log(currentContent)
   if (currentContent.length === "") {
     addAddressButton.disabled = true;
   } else {
@@ -92,13 +87,11 @@ openFileButton.addEventListener('click', () => {
   event.preventDefault()
   const fileName = mainProcess.getFileFromUser(currentWindow);
   addAddressButton.disabled = false;
-  console.log(fileName);
 });
 
 ipc.on('file-opened', (event, file) => {
   addAddressType = 'file';
   addressTextBox.value = file;
-  //updateUserInterface(true, addAddressType, content);
 });
 
 ipc.on('searchDerivationPath', (event, message) => {

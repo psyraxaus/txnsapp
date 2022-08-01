@@ -796,7 +796,6 @@ const removeAllTransactions = exports.removeAllTransactions = async (targetWindo
   });
   db.run("DELETE FROM transactions", function(err) {
     if (err) {
-      console.log(err)
       dbErrorBox(err, 'deleting from');
     }
   })
@@ -925,7 +924,6 @@ const dbHasTransactions = exports.dbHasTransactions = async (targetWindow) => {
 		}
 	});
 	let dbHasTransactionsObj = await _db_all(db, `SELECT * FROM transactions;`);
-  console.log(dbHasTransactionsObj.length)
   if (dbHasTransactionsObj.length > 0) {
     targetWindow.webContents.send('has-transactions');
   };
