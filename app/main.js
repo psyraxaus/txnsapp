@@ -211,7 +211,7 @@ const _saveExportedFile = async (db, targetWindow, file, csvFormat, walletSource
           "" AS 'Fee Currency',
           "" AS 'Fee Amount',
           vins AS 'From (Optional)',
-          GROUP_CONCAT(address) AS 'To (Optional)',
+          GROUP_CONCAT(transactions.address) AS 'To (Optional)',
           txid AS 'ID (Optional)',
           "" AS 'Description (Optional)'
         FROM transactions
@@ -235,6 +235,7 @@ const _saveExportedFile = async (db, targetWindow, file, csvFormat, walletSource
           txid AS 'ID (Optional)',
           "" AS 'Description (Optional)'
         FROM transactions
+        INNER JOIN wallet ON wallet.address = transactions.address
         WHERE
           vins <> "zsf45QuD75XJdm3uLftiW6pucvbhvrbhAhZ"
           AND vins <> "zsoVG9Evw68te8hRAP3xPXSbx9HoH26LUYN"
@@ -1238,11 +1239,11 @@ const _formatTransactionsForExport = async (targetWindow, nodePayFromAddrs, db, 
     targetWindow.webContents.send('progress-bar', progressCountInt);
 
     if (settings.splitCsvOutputboxCheck == true && !addressStr) {
-      consolidatedNodeTxnsObj = await _db_all(db, sqlConsolQuery + `AND walletsource = '${walletSourceName}' GROUP BY txid HAVING COUNT(*) > 0;`);
+      consolidatedNodeTxnsObj = await _db_all(db, sqlConsolQuery + ` AND walletsource = '${walletSourceName}' GROUP BY txid HAVING COUNT(*) > 0;`);
     } else if (settings.splitCsvOutputboxCheck == false && !addressStr) {
       consolidatedNodeTxnsObj = await _db_all(db, sqlConsolQuery + ` GROUP BY txid HAVING COUNT(*) > 0;`);
     } else if (addressStr) {
-      consolidatedNodeTxnsObj = await _db_all(db, sqlConsolQuery + `AND transactions.address = '${addressStr}' GROUP BY txid HAVING COUNT(*) > 0;`);
+      consolidatedNodeTxnsObj = await _db_all(db, sqlConsolQuery + ` AND transactions.address = '${addressStr}' GROUP BY txid HAVING COUNT(*) > 0;`);
     }
     progressCountInt += 50;
 
