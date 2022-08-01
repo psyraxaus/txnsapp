@@ -60,6 +60,7 @@ app.on('ready', () => {
 
   mainWindow.once('ready-to-show', () => {
 		getAddressList(mainWindow);
+    dbHasTransactions(mainWindow);
 		mainWindow.webContents.send('ready')
     mainWindow.show();
   });
@@ -130,6 +131,7 @@ const saveExportedTransactions  = exports.saveExportedTransactions = async (targ
       await _saveExportedFile(db, targetWindow, `${app.getPath('documents')}/${settings.csvFormat}_${walletSourceName}.csv`, csvFormat, rows[i].walletsource);
       targetWindow.webContents.send('task-running', `File saved successfully to ${app.getPath('documents')}/${settings.csvFormat}_${walletSourceName}.csv`);
     }
+    databaseClose(db);
     targetWindow.webContents.send('task-running', `All files saved`);
   }
 };
@@ -154,6 +156,7 @@ const exportSingleAddressTransactions = exports.exportSingleAddressTransactions 
   }).catch(err => {
     targetWindow.webContents.send('task-running', `Saving exported transactions error: ${err}`);
   });
+  databaseClose(db);
 }
 
 const _saveExportedFile = async (db, targetWindow, file, csvFormat, walletSourceName, addressStr) => {
@@ -536,6 +539,7 @@ const saveSettings = exports.saveSettings = async(targetWindow) => {
     }
   });
   db.run("INSERT OR REPLACE INTO settings (name, value) values ('settings', ?)",b64settings);
+  databaseClose(db);
 };
 
 const loadSettings = exports.loadSettings = async(targetWindow) => {
@@ -554,6 +558,7 @@ const loadSettings = exports.loadSettings = async(targetWindow) => {
     }
     setSettings(targetWindow, JSON.parse(Buffer.from(rows[0].value, "base64").toString("ascii")));
   });
+  databaseClose(db);
 };
 
 const addSingleAddress = exports.addSingleAddress = async(targetWindow, addressText, walletSourceText,  descriptionText) => {
@@ -605,8 +610,6 @@ const addSingleAddress = exports.addSingleAddress = async(targetWindow, addressT
     targetWindow.webContents.send('searchDerivationPath', `Error: The addresses entered is not a valid Horizen address.`);
 	};
 	databaseClose(db);
-
-
 }
 
 const deriveAddressesFromXpub = exports.deriveAddressesFromXpub = async (targetWindow, xpub, walletsource, description) => {
@@ -631,6 +634,7 @@ const deriveAddressesFromXpub = exports.deriveAddressesFromXpub = async (targetW
 			defaultId: 0,
 		});
 		targetWindow.getElementById(addressTextBox).value = '';
+    databaseClose(db);
 		return;
 	}
 
@@ -759,7 +763,7 @@ const loadAddressesFromFile = exports.loadAddressesFromFile = async (targetWindo
 	mainWindow.webContents.send('new-addresses', newAddresses);
 	targetWindow.webContents.send('searchDerivationPath', `All addresses with a transaction history have been added.`);
   targetWindow.webContents.send('completed-import');
-}
+};
 
 const removeSingleAddress = exports.removeSingleAddress = async (targetWindow, address) => {
   let db = new sqlite3.Database(dbPath, (err) => {
@@ -782,7 +786,25 @@ const removeSingleAddress = exports.removeSingleAddress = async (targetWindow, a
   let existingAddresses = await _db_all(db, `SELECT address, description, walletsource FROM wallet`);
   targetWindow.webContents.send('addresses-loaded', existingAddresses);
   databaseClose(db);
-}
+};
+
+const removeAllTransactions = exports.removeAllTransactions = async (targetWindow) => {
+  let db = new sqlite3.Database(dbPath, (err) => {
+    if (err) {
+      dbErrorBox(err, 'connecting to');
+    }
+  });
+  db.run("DELETE FROM transactions", function(err) {
+    if (err) {
+      console.log(err)
+      dbErrorBox(err, 'deleting from');
+    }
+  })
+  let existingAddresses = await _db_all(db, `SELECT address, description, walletsource FROM wallet`);
+  targetWindow.webContents.send('transactions-deleted');
+  targetWindow.webContents.send('addresses-loaded', existingAddresses);
+  databaseClose(db);
+};
 
 const updateAddressDetails = exports.updateAddressDetails = async (targetWindow, address, newWalletSource, newDescription) => {
   let db = new sqlite3.Database(dbPath, (err) => {
@@ -792,6 +814,7 @@ const updateAddressDetails = exports.updateAddressDetails = async (targetWindow,
   });
   db.run(`UPDATE wallet SET description = '${newDescription}', walletsource = '${newWalletSource}' WHERE address = '${address}'`);
   let updatedAddressObj = await _db_all(db, `SELECT address, walletsource, description FROM wallet WHERE address = '${address}'`)
+  databaseClose(db);
   targetWindow.webContents.send('address-updated', updatedAddressObj);
   targetWindow.webContents.send('task-running', `Address details updated.`);
 }
@@ -895,6 +918,20 @@ const getAddressList = exports.getAddressList = async (targetWindow) => {
 	databaseClose(db);
 };
 
+const dbHasTransactions = exports.dbHasTransactions = async (targetWindow) => {
+	let db = new sqlite3.Database(dbPath, (err) => {
+		if (err) {
+			dbErrorBox(err, 'connecting to');
+		}
+	});
+	let dbHasTransactionsObj = await _db_all(db, `SELECT * FROM transactions;`);
+  console.log(dbHasTransactionsObj.length)
+  if (dbHasTransactionsObj.length > 0) {
+    targetWindow.webContents.send('has-transactions');
+  };
+	databaseClose(db);
+};
+
 const getTransactionsByAddress = exports.getTransactionsByAddress = async (targetWindow, address) => {
 	let db = new sqlite3.Database(dbPath, (err) => {
 		if (err) {
@@ -902,6 +939,9 @@ const getTransactionsByAddress = exports.getTransactionsByAddress = async (targe
 		}
 	});
 	let txList = await _db_all(db, `SELECT * FROM transactions WHERE address = '${address}'`);
+  if (txList.length > 0) {
+    targetWindow.webContents.send('has-transactions');
+  };
 	targetWindow.webContents.send('address-transactions', txList);
 	databaseClose(db);
 }
@@ -947,6 +987,8 @@ const fetchAllTransactions = exports.fetchAllTransactions = async (targetWindow)
 		targetWindow.webContents.send('task-running', `Update from API failed: ${err} \n - ${errType}`);
 		return;
 	};
+  dbHasTransactions(targetWindow);
+  databaseClose(db);
 	targetWindow.webContents.send('task-running', `All transactions saved`);
   return;
 }
@@ -980,6 +1022,10 @@ const fetchSingleAddressTransactions = exports.fetchSingleAddressTransactions = 
     targetWindow.webContents.send('task-running', `Update from API failed: ${err} \n - ${errType}`);
     return;
   };
+  dbHasTransactions(targetWindow);
+  let txList = await _db_all(db, `SELECT * FROM transactions WHERE address = '${address}'`);
+  targetWindow.webContents.send('address-transactions', txList);
+  databaseClose(db);
   targetWindow.webContents.send('task-running', `All transactions saved`);
   return;
 }

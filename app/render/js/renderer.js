@@ -87,6 +87,11 @@ exportAllTransactionsButton.addEventListener('click', () => {
   mainProcess.saveExportedTransactions(currentWindow, settings.csvFormat);
 })
 
+removeAllTransactionsButton.addEventListener('click', () => {
+  event.preventDefault();
+  mainProcess.removeAllTransactions(currentWindow);
+})
+
 removeAddresButton.addEventListener('click', () => {
   event.preventDefault();
   mainProcess.removeSingleAddress(currentWindow, selectedAddress)
@@ -235,8 +240,18 @@ ipcRenderer.on('settings', (event, message) => {
   currentTaskwindowText.innerHTML = `Current API URL: ${settings.apiUrl}`;
 });
 
-ipcRenderer.on('file-save', (event, filePath) => {
-})
+ipcRenderer.on('transactions-deleted', (event) => {
+  removeAllTransactionsButton.disabled = true;
+  exportAllTransactionsButton.disabled = true;
+  fetchSingleAddressTransactionsButton.disabled = true;
+  exportSingleAddressButton.disabled = true;
+});
+
+ipcRenderer.on('has-transactions', (event) => {
+  removeAllTransactionsButton.disabled = false;
+  exportAllTransactionsButton.disabled = false;
+  exportSingleAddressButton.disabled = false;
+});
 
 ipcRenderer.on('addresses-loaded', (event, addressItems) => {
   _removeAllChildNodes(addrListNode);
@@ -246,7 +261,6 @@ ipcRenderer.on('addresses-loaded', (event, addressItems) => {
     const addrItem = formatAddrItem(addressItems[i]);
     addrListNode.appendChild(addrItem);
   }
-  removeAddresButton.disabled = true;
   _highlightAddr();
 })
 
@@ -288,7 +302,7 @@ const createTxItem = (txObj, newTx = false) => {
         node.classList.add("txItemNew");
     }
     return node;
-}
+};
 
 const showTxDetail = (txObj) => {
     const templateId = "txDialogTemplate";
@@ -319,7 +333,7 @@ const showTxDetail = (txObj) => {
             dialog.querySelector(".txDetailBlock").textContent = txObj.block;
         }
     });
-}
+};
 
 const cloneTemplate = (id) => {
     const templateNode = document.getElementById(id);
@@ -340,7 +354,7 @@ const fixPage = (parent = document) => {
 
 const fixLinks = (parent = document) => {
     querySelectorAllDeep("a[href^='http']", parent).forEach(link => link.addEventListener("click", linkHandler));
-}
+};
 
 const setAddressNodeName = (addrObj, addrNode) => {
     if (addrObj.walletsource) {
@@ -348,7 +362,7 @@ const setAddressNodeName = (addrObj, addrNode) => {
     } else {
         setNodeTrText(addrNode, addrObj.address, "wallet.tabOverview.unnamedAddress", "Unnamed address");
     }
-}
+};
 
 const formatAddressInList = (addr) => {
     if (addr.length === 35) {
@@ -356,7 +370,7 @@ const formatAddressInList = (addr) => {
     } else {
         return addr.substring(0, 17) + "..." + addr.substring(80);
     }
-}
+};
 
 function querySelectorAllDeep(selector, startRoot = document) {
     const roots = [startRoot];
@@ -378,7 +392,7 @@ function querySelectorAllDeep(selector, startRoot = document) {
         matches.push(... r.querySelectorAll(selector));
     }
     return matches;
-}
+};
 
 function deepClone(obj) {
     // feel free to make a better implementation
@@ -386,7 +400,7 @@ function deepClone(obj) {
         return null;
     }
     return JSON.parse(JSON.stringify(obj));
-}
+};
 
 function setNodeTrText(node, address, key, defaultVal) {
     if (key) {
@@ -397,15 +411,15 @@ function setNodeTrText(node, address, key, defaultVal) {
         delete node.dataset.tr;
         node.textContent = defaultVal;
     }
-}
+};
 
 function tr(key, defaultVal) {
     return (settings && settings.lang) ? translate(langDict, key, defaultVal) : defaultVal;
-}
+};
 
 function formatEpochTime(epochSeconds) {
     return DateTime.fromMillis(epochSeconds).toLocaleString(DateTime.DATETIME_MED);
-}
+};
 
 function setTxBalanceText(node, balance) {
     let balanceStr, balanceClass;
@@ -419,11 +433,11 @@ function setTxBalanceText(node, balance) {
     node.classList.add(balanceClass);
     const amountNode = node.firstElementChild;
     amountNode.textContent = balanceStr;
-}
+};
 
 function formatBalance(balance, localeTag = undefined) {
     return parseFloat(balance).toLocaleString(localeTag, {minimumFractionDigits: 8, maximumFractionDigits: 8});
-}
+};
 
 const _highlightAddr = () => {
   document.querySelectorAll('.addrItem').forEach(function (el) {
@@ -432,7 +446,6 @@ const _highlightAddr = () => {
       e.currentTarget.classList.toggle('active');
       editAddresButton.disabled = false;
       fetchSingleAddressTransactionsButton.disabled = false;
-      exportSingleAddressButton.disabled = false;
     });
   });
 };
@@ -441,8 +454,8 @@ const _removeAllChildNodes = (parent) => {
     while (parent.firstChild) {
         parent.removeChild(parent.firstChild);
     }
-}
+};
 
 const _setBar = (percentage) => {
   progressBar.style.width = percentage + "%";
-}
+};
