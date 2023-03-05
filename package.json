@@ -4,7 +4,7 @@
     "description": "Application to fetch the transaction history for Horizen addresses and export to various online cointracking services",
     "main": "app/main.js",
     "dependencies": {
-        "@electron/remote": "^2.0.5",
+        "@electron/remote": "^2.0.9",
         "async": "^3.2.3",
         "axios": "^0.26.1",
         "bitcore-lib-zen": "git+https://github.com/psyraxaus/bitcore-lib-zen.git",
