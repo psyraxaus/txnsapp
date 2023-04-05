@@ -16,6 +16,16 @@
           <span><button id="export-alll-txns" data-tr=wallet.exportAllTransactions disabled>Export all Transactions</button></span>
           <span><button id="settings-button" data-tr=wallet.showSettingsDialogButton>Settings</button></span>
       </div>
+      <div class="search center">
+        <span>Search</span>
+        <span><input id="searchBox" type="text" name="comment" value="" maxlength="200" style="width:400px"></span>
+        <span>
+          <input type="radio" name="searchType" id="source" value="source" checked="TRUE"> Source
+          <input type="radio" name="searchType" id="address" value="address"> Address
+          <input type="radio" name="searchType" id="description" value="description"> Description
+          <button id="clear-button">Clear</button>
+        </span>
+      </div>
     </header>
     <div class="container">
       <div class="col-addresses" id="addresses">

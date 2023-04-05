@@ -21,11 +21,67 @@ const removeAddresButton = document.querySelector('#remove-address-button');
 const editAddresButton = document.querySelector('#edit-address-button');
 const exportSingleAddressButton = document.querySelector('#export-single-addr-txns-button');
 const progressBar = document.getElementById('bar');
+const searchTextBox = document.getElementById('searchBox');
+//const searchType = document.querySelector('input[name="searchType"]:checked');
+const clearButton = document.querySelector('#clear-button');
 
 let filePath = null;
 let settings;
 let selectedAddress;
+let searchText = '';
 
+const eventHandler = (event) => {
+  let searchType = document.querySelector('input[name="searchType"]:checked').value
+
+  if ( event.key == 'Backspace') {
+    searchText = document.getElementById('searchBox').value
+  } else if ( event.key == 'Delete' ) {
+    searchText = document.getElementById('searchBox').value
+  } else if ( event.key ) {
+    searchText = document.getElementById('searchBox').value
+  }
+
+  mainProcess.getAddressList(currentWindow, searchType, searchText);
+}
+
+if (document.querySelector('input[name="searchType"]')) {
+  document.querySelectorAll('input[name="searchType"]').forEach((elem) => {
+    elem.addEventListener("change", function(event) {
+      eventHandler(event);
+      var item = event.target.value;
+      console.log(item);
+    });
+  });
+}
+
+searchTextBox.addEventListener('keyup', eventHandler, false);
+searchTextBox.addEventListener('click', eventHandler, false);
+
+clearButton.addEventListener('click', () => {
+  event.preventDefault();
+  document.getElementById('searchBox').value = "";
+  searchText = '';
+  mainProcess.getAddressList(currentWindow);
+})
+
+/*
+searchTextBox.addEventListener('keyup', (event) => {
+    if (event.key == 'Backspace') {
+        console.log('Backspace pressed')
+        if ( searchText != '' ) {
+            console.log('Caret at: ', event.target.selectionStart)
+        }
+    } 
+    searchText = searchText + event.key;
+    console.log(searchText)
+})
+
+searchTextBox.addEventListener('click', (event) => {
+    event.preventDefault();
+    console.log(event.target.selectionStart)
+
+})
+*/
 addrListNode.addEventListener('contextmenu', (event) => {
   event.preventDefault();
   var clicked = event.target;

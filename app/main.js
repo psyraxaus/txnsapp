@@ -54,7 +54,7 @@ app.on('ready', () => {
     }, show: false
   });
 
-	mainWindow.setResizable(false);
+//	mainWindow.setResizable(false);
   remoteMain.enable(mainWindow.webContents);
   mainWindow.loadURL(`file://${__dirname}/render/html/index.html`);
 
@@ -907,15 +907,32 @@ async function _checkExisting(db, newAddress) {
 	return false;
 };
 
-const getAddressList = exports.getAddressList = async (targetWindow) => {
+const getAddressList = exports.getAddressList = async (targetWindow, searchType, searchString) => {
 	let db = new sqlite3.Database(dbPath, (err) => {
 		if (err) {
 			dbErrorBox(err, 'connecting to');
 		}
 	});
-	let existingAddresses = await _db_all(db, `SELECT address, description, walletsource FROM wallet`);
-	targetWindow.webContents.send('addresses-loaded', existingAddresses);
-	databaseClose(db);
+
+  if ( searchType && searchString ) {
+    if ( searchType == 'source' ) {
+      let existingAddresses = await _db_all(db, `SELECT address, description, walletsource FROM wallet WHERE walletsource LIKE '%${searchString}%' --case-insensitive`);
+      targetWindow.webContents.send('addresses-loaded', existingAddresses);
+      databaseClose(db);
+    } else if ( searchType == 'address' ) {
+      let existingAddresses = await _db_all(db, `SELECT address, description, walletsource FROM wallet WHERE address LIKE '%${searchString}%'`);
+      targetWindow.webContents.send('addresses-loaded', existingAddresses);
+      databaseClose(db);
+    } else if ( searchType == 'description' ) {
+      let existingAddresses = await _db_all(db, `SELECT address, description, walletsource FROM wallet WHERE description LIKE '%${searchString}%' --case-insensitive`);
+      targetWindow.webContents.send('addresses-loaded', existingAddresses);
+      databaseClose(db);
+    }
+  } else {
+    let existingAddresses = await _db_all(db, `SELECT address, description, walletsource FROM wallet`);
+    targetWindow.webContents.send('addresses-loaded', existingAddresses);
+    databaseClose(db);
+  }
 };
 
 const dbHasTransactions = exports.dbHasTransactions = async (targetWindow) => {
