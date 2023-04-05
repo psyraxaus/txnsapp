@@ -980,6 +980,10 @@ const fetchAllTransactions = exports.fetchAllTransactions = async (targetWindow)
 			dbErrorBox(err, 'connecting to');
 		}
 	});
+  let xpubs = await _db_all(db, `SELECT DISTINCT xpub, walletsource, description FROM wallet WHERE xpub is not null;`)
+  for (const obj of xpubs) {
+    await deriveAddressesFromXpub(targetWindow, obj.xpub, obj.walletsource, obj.description);
+  }
 	let addrObjs = await _db_all(db, `SELECT address FROM wallet`);
   let knownTxidsSqlQuery = `SELECT address,txid FROM transactions`;
 	const knownTxIds = await getExistingTxList(targetWindow, knownTxidsSqlQuery);
