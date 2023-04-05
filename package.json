@@ -1,6 +1,6 @@
 {
     "name": "txnsapp",
-    "version": "1.0.10",
+    "version": "1.0.11",
     "description": "Application to fetch the transaction history for Horizen addresses and export to various online cointracking services",
     "main": "app/main.js",
     "dependencies": {
@@ -43,7 +43,6 @@
         "electron": "^24.0.0",
         "electron-builder": "^24.1.3",
         "electron-notarize": "^1.2.1",
-        "electron-prebuilt": "^1.4.13",
         "fs-jetpack": "^4.3.1",
         "Q": "^1.0.0",
         "rcedit": "^3.0.1"
