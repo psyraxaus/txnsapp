@@ -22,7 +22,6 @@ const editAddresButton = document.querySelector('#edit-address-button');
 const exportSingleAddressButton = document.querySelector('#export-single-addr-txns-button');
 const progressBar = document.getElementById('bar');
 const searchTextBox = document.getElementById('searchBox');
-//const searchType = document.querySelector('input[name="searchType"]:checked');
 const clearButton = document.querySelector('#clear-button');
 
 let filePath = null;
@@ -64,24 +63,6 @@ clearButton.addEventListener('click', () => {
   mainProcess.getAddressList(currentWindow);
 })
 
-/*
-searchTextBox.addEventListener('keyup', (event) => {
-    if (event.key == 'Backspace') {
-        console.log('Backspace pressed')
-        if ( searchText != '' ) {
-            console.log('Caret at: ', event.target.selectionStart)
-        }
-    } 
-    searchText = searchText + event.key;
-    console.log(searchText)
-})
-
-searchTextBox.addEventListener('click', (event) => {
-    event.preventDefault();
-    console.log(event.target.selectionStart)
-
-})
-*/
 addrListNode.addEventListener('contextmenu', (event) => {
   event.preventDefault();
   var clicked = event.target;
