@@ -39,13 +39,13 @@
     "homepage": "https://github.com/psyraxaus/txnsapp",
     "license": "MIT",
     "devDependencies": {
-        "Q": "^1.0.0",
         "asar": "^3.1.0",
-        "electron": "^17.4.11",
+        "electron": "^24.0.0",
         "electron-builder": "^23.1.0",
         "electron-notarize": "^1.2.1",
         "electron-prebuilt": "^1.4.13",
         "fs-jetpack": "^4.3.1",
+        "Q": "^1.0.0",
         "rcedit": "^3.0.1"
     }
 }
