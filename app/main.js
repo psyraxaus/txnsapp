@@ -954,7 +954,7 @@ const getTransactionsByAddress = exports.getTransactionsByAddress = async (targe
 			dbErrorBox(err, 'connecting to');
 		}
 	});
-	let txList = await _db_all(db, `SELECT * FROM transactions WHERE address = '${address}'`);
+	let txList = await _db_all(db, `SELECT * FROM transactions WHERE address = '${address}' ORDER BY time DESC`);
   if (txList.length > 0) {
     targetWindow.webContents.send('has-transactions');
   };
