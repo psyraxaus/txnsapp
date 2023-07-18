@@ -243,6 +243,7 @@ const _saveExportedFile = async (db, targetWindow, file, csvFormat, walletSource
           AND vouts <> transactions.address`
 
       allTransactionsStr = await _formatTransactionsForExport(targetWindow, nodePayFromAddrs, db, nonConsolSqlQuery, consoldateSqlQuery, consolidateIntTxnsQuery, walletSourceName, addressStr);
+      dateFormat = 'Timestamp (UTC)';
       break;
     case "Cointracking":
       csvFields = ['Type', 'Buy Amount', 'Buy Currency', 'Sell Amount', 'Sell Currency', 'Fee', 'Fee Currency', 'Exchange', 'Trade-Group', 'Comment', 'Date', "Tx-ID", "Buy Value in Account Currrency", "Sell Value in Account Currency" ];
@@ -315,6 +316,7 @@ const _saveExportedFile = async (db, targetWindow, file, csvFormat, walletSource
             AND vouts <> transactions.address`;
 
       allTransactionsStr = await _formatTransactionsForExport(targetWindow, nodePayFromAddrs, db, nonConsolSqlQuery, consoldateSqlQuery, consolidateIntTxnsQuery, walletSourceName, addressStr);
+      dateFormat = 'Date';
       break;
     case "Koinly":
       csvFields = ['Date', 'Sent Amount', 'Sent Currency', 'Received Amount', 'Received Currency', 'Fee Amount', 'Fee Currency', 'Net Worth Amount', 'Net Worth Currency', 'Label', 'Description', 'TxHash' ];
@@ -380,6 +382,7 @@ const _saveExportedFile = async (db, targetWindow, file, csvFormat, walletSource
           AND vouts <> transactions.address`;
 
       allTransactionsStr = await _formatTransactionsForExport(targetWindow, nodePayFromAddrs, db, nonConsolSqlQuery, consoldateNodeSqlQuery, consolidateIntTxnsQuery, walletSourceName, addressStr);
+      dateFormat = 'Date';
       break;
     case "Accointing":
       csvFields = ['transactionType', 'date', 'inBuyAmount', 'inBuyAsset', 'outSellAmount', 'outSellAsset', 'feeAmount (optional)', 'feeAsset (optional)', 'classification (optional)', 'operationId (optional)', 'comments (optional)' ];
@@ -442,6 +445,7 @@ const _saveExportedFile = async (db, targetWindow, file, csvFormat, walletSource
           AND vouts <> transactions.address`;
 
         allTransactionsStr = await _formatTransactionsForExport(targetWindow, nodePayFromAddrs, db, nonConsolSqlQuery, consoldateSqlQuery, consolidateIntTxnsQuery, walletSourceName, addressStr);
+        dateFormat = 'date';
       break;
     case "Unformatted":
       csvFields = ['Timestamp (UTC)', 'Type','Amount Transacted', 'Currency', 'Fee Amount', 'Fee Currency', 'From Address', 'To', 'Transaction ID', 'Wallet Source', 'Description' ];
@@ -501,10 +505,26 @@ const _saveExportedFile = async (db, targetWindow, file, csvFormat, walletSource
           AND vouts <> transactions.address`;
 
       allTransactionsStr = await _formatTransactionsForExport(targetWindow, nodePayFromAddrs, db, nonConsolSqlQuery, consoldateSqlQuery, consolidateIntTxnsQuery, walletSourceName, addressStr);
+      dateFormat = 'Time (UTC)';
       break;
   }
 
   const jsonTransactions = JSON.parse(allTransactionsStr.replace(/\]\[/g, ","));
+
+  //Comparer Function    
+  function GetSortOrder(prop) {    
+      return function(a, b) {    
+          if (a[prop] > b[prop]) {    
+              return 1;    
+          } else if (a[prop] < b[prop]) {    
+              return -1;    
+          }    
+          return 0;    
+      }    
+  } 
+
+  jsonTransactions.sort(GetSortOrder(dateFormat));  
+
 	const json2csvParser = new Json2csvParser({ csvFields });
 	const csv = json2csvParser.parse(jsonTransactions);
 
