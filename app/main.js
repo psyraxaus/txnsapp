@@ -137,11 +137,6 @@ const saveExportedTransactions  = exports.saveExportedTransactions = async (targ
 };
 
 const exportSingleAddressTransactions = exports.exportSingleAddressTransactions = async (targetWindow, addressStr, csvFormat) => {
-  let db = new sqlite3.Database(dbPath, (err) => {
-    if (err) {
-      dbErrorBox(err, 'connecting to');
-    }
-  });
   dialog.showSaveDialog(targetWindow, {
     properties: ['saveFile'],
     defaultPath: app.getPath('documents'),
@@ -150,6 +145,11 @@ const exportSingleAddressTransactions = exports.exportSingleAddressTransactions 
     ]
   }).then(result => {
     if (result.filePath) {
+        let db = new sqlite3.Database(dbPath, (err) => {
+    if (err) {
+      dbErrorBox(err, 'connecting to');
+    }
+  });
       _saveExportedFile(db, targetWindow, result.filePath.toString(), csvFormat, '', addressStr);
       targetWindow.webContents.send('task-running', `Successfully saved file to ${result.filePath.toString()}`);
     }
@@ -503,7 +503,6 @@ const _saveExportedFile = async (db, targetWindow, file, csvFormat, walletSource
           AND vins <> "zsoVG9Evw68te8hRAP3xPXSbx9HoH26LUYN"
           AND vins <> "zsi4CcCUYtR1iNjEyjkLPjSVPzSPa4atxt9"
           AND vouts <> transactions.address`;
-
       allTransactionsStr = await _formatTransactionsForExport(targetWindow, nodePayFromAddrs, db, nonConsolSqlQuery, consoldateSqlQuery, consolidateIntTxnsQuery, walletSourceName, addressStr);
       dateFormat = 'Time (UTC)';
       break;
